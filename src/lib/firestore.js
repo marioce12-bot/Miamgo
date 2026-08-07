@@ -21,6 +21,24 @@ export async function ensureCustomerProfile(user) {
   }
 }
 
+export async function getUserProfile(userId) {
+  const { db, doc, getDoc } = await firestore();
+  const snapshot = await getDoc(doc(db, "users", userId));
+  return snapshot.exists() ? snapshot.data() : null;
+}
+
+export async function registerProfile(user, profile) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "users", user.uid), {
+    displayName: profile.displayName,
+    email: user.email || null,
+    phone: profile.phone || null,
+    role: profile.role,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function setPostLike(userId, postId, isLiked) {
   const { db, deleteDoc, doc, serverTimestamp, setDoc } = await firestore();
   const likeRef = doc(db, "posts", String(postId), "likes", userId);

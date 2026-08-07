@@ -22,8 +22,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSelf(userId) || isPlatformAdmin();
       allow create: if isSelf(userId)
-        && request.resource.data.role == 'client'
-        && request.resource.data.keys().hasOnly(['displayName', 'email', 'role', 'createdAt', 'updatedAt']);
+        && request.resource.data.role in ['client', 'restaurant_owner', 'driver']
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'phone', 'role', 'createdAt', 'updatedAt']);
       allow update: if isSelf(userId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'phone', 'photoURL', 'addresses', 'updatedAt']);
     }

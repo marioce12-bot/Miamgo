@@ -2,6 +2,7 @@ import "./globals.css";
 import "./interactive.css";
 import "./modals.css";
 import "./marketing.css";
+import "./theme.css";
 
 export const metadata = {
   title: "Miamgo | Le fil qui donne faim",
