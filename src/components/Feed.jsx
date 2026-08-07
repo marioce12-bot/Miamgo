@@ -26,6 +26,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { auth } from "../lib/firebase";
 import { addCartItem, addComment, ensureCustomerProfile, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
+import MobileRoleNav from "./MobileRoleNav";
 
 const posts = [
   {
@@ -246,6 +247,7 @@ export default function MiamgoFeed() {
 
 
       {showLogin && <div className="modal-backdrop" role="presentation"><section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title"><button className="modal-close" onClick={() => setShowLogin(false)} aria-label="Fermer"><X size={20} /></button><div className="login-mark">m<span>go</span></div><p className="eyebrow">BIENVENUE SUR MIAMGO</p><h2 id="login-title">{authMode === "login" ? "Connectez-vous pour continuer" : "Créez votre compte gourmand"}</h2><p className="modal-text">Votre action vous attend juste après la connexion.</p><form onSubmit={handleAuth}><label>Adresse e-mail<input type="email" name="email" required placeholder="vous@exemple.com" /></label><label>Mot de passe<input type="password" name="password" required minLength="6" placeholder="6 caractères minimum" /></label>{authError && <p className="auth-error">{authError}</p>}<button className="submit-auth" disabled={isSubmitting}>{isSubmitting ? "Connexion..." : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button></form><button className="switch-auth" onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}>{authMode === "login" ? "Pas encore de compte? S'inscrire" : "Déjà un compte? Se connecter"}</button></section></div>}
+      <MobileRoleNav />
     </main>
   );
 }
