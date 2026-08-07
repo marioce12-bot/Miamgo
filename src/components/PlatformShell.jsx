@@ -42,9 +42,9 @@ export default function PlatformShell({ children, active = "" }) {
         <div className="portal-actions"><Link className="notification-link" href={profileLink} aria-label="Notifications"><Bell size={19} /><b>2</b></Link><Link href={profileLink}>Mon profil</Link></div>
       </header>
       {children}
-      <nav className="portal-mobile-nav">
+      {role === "client" && <nav className="portal-mobile-nav">
         {items.map(([label, href, Icon]) => <Link className={active === label ? "active" : ""} href={href} key={label}><Icon size={21} /><span>{label}</span></Link>)}
-      </nav>
+      </nav>}
     </div>
   );
 }
