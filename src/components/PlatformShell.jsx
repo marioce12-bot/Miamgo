@@ -29,7 +29,7 @@ export default function PlatformShell({ children, active = "" }) {
     ["Panier", "/panier", ShoppingBag],
     ["Commandes", "/commandes", UserRound],
   ];
-  const restaurantItems = [["Tableau de bord", "/espace-resto", LayoutDashboard], ["Commandes", "/espace-resto", ClipboardList], ["Ma boutique", "/restaurant/chez-aicha", Store], ["Livreurs", "/livreurs", Truck]];
+  const restaurantItems = [["Fil", "/accueil", Home], ["Tableau de bord", "/espace-resto", LayoutDashboard], ["Publier", "/espace-resto/publier", Store], ["Livreurs", "/livreurs", Truck]];
   const driverItems = [["Mes courses", "/espace-livreur", Truck], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
   const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
 
