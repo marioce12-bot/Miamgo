@@ -47,6 +47,13 @@ export async function registerProfile(user, profile) {
   });
 }
 
+export function explainFirestoreError(error) {
+  if (error?.code === "permission-denied") return "Firestore a refusé l'écriture. Publiez les règles Firestore actuelles, puis réessayez avec le même e-mail et mot de passe.";
+  if (error?.code === "failed-precondition") return "Cloud Firestore n'est pas activé dans le projet miamgo-2479d. Activez Firestore Database dans Firebase Console.";
+  if (error?.code === "unavailable") return "Firestore est indisponible ou la connexion Internet est interrompue.";
+  return `Impossible d'enregistrer les données Firestore${error?.code ? ` (${error.code})` : ""}.`;
+}
+
 export async function updateProfileSettings(userId, changes) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   await setDoc(doc(db, "users", userId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
