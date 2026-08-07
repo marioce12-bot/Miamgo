@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Compass, Home, MapPin, ShoppingBag, UserRound } from "lucide-react";
+import { Bell, ClipboardList, Compass, Home, LayoutDashboard, MapPin, ShoppingBag, Store, Truck, UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -13,20 +13,25 @@ export default function PlatformShell({ children, active = "" }) {
   const router = useRouter();
   const [location, setLocation] = useState({ city: "Cotonou", country: "BJ" });
   const [profileLink, setProfileLink] = useState("/profil");
+  const [role, setRole] = useState("client");
   useEffect(() => onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     const profile = await getUserProfile(user.uid).catch(() => null);
     if (profile?.city) setLocation({ city: profile.city, country: profile.country || "BJ" });
     if (profile?.role === "restaurant_owner") setProfileLink("/espace-resto");
     if (profile?.role === "driver") setProfileLink("/espace-livreur");
-    if (profile?.role !== "restaurant_owner" && await getOwnedRestaurant(user.uid).catch(() => null)) setProfileLink("/espace-resto");
+    if (profile?.role) setRole(profile.role);
+    if (profile?.role !== "restaurant_owner" && await getOwnedRestaurant(user.uid).catch(() => null)) { setProfileLink("/espace-resto"); setRole("restaurant_owner"); }
   }), []);
-  const items = [
+  const customerItems = [
     ["Accueil", "/accueil", Home],
     ["Explorer", "/explorer", Compass],
     ["Panier", "/panier", ShoppingBag],
     ["Commandes", "/commandes", UserRound],
   ];
+  const restaurantItems = [["Tableau de bord", "/espace-resto", LayoutDashboard], ["Commandes", "/espace-resto", ClipboardList], ["Ma boutique", "/restaurant/chez-aicha", Store], ["Livreurs", "/livreurs", Truck]];
+  const driverItems = [["Mes courses", "/espace-livreur", Truck], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
+  const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
 
   return (
     <div className="platform-page">
