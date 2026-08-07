@@ -9,7 +9,7 @@ import { auth } from "../lib/firebase";
 import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
 
 const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
-const restaurantItems = [["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Fil", "/accueil", Home], ["Plus", "/espace-resto/plus", Menu]];
+const restaurantItems = [["Fil", "/accueil", Home], ["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Plus", "/espace-resto/plus", Menu]];
 
 export default function MobileRoleNav() {
   const pathname = usePathname();
