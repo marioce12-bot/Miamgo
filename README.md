@@ -24,3 +24,5 @@ Le cahier des charges produit est disponible dans [`docs/cahier-des-charges.md`]
 Les regles de securite sont dans [`firestore.rules`](firestore.rules) et les index dans [`firestore.indexes.json`](firestore.indexes.json). Activez Cloud Firestore, puis copiez les regles dans **Firestore Database > Rules** de Firebase Console.
 
 Les collections utilisees sont `users`, `restaurants`, `posts`, `favorites`, `carts`, `orders` et `notifications`. Un client ne peut acceder qu'a son propre profil, panier, favoris et commandes. Les donnees restaurant sont protegees par le champ `ownerId`.
+
+Pour publier exactement les regles du depot avec Firebase CLI: `npx firebase-tools login`, puis `npx firebase-tools use miamgo-2479d` et `npx firebase-tools deploy --only firestore`. Sans cette publication, Firebase Authentication peut creer un e-mail mais Firestore refusera la creation du profil associe.
