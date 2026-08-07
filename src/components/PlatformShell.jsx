@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ClipboardList, Compass, Home, LayoutDashboard, MapPin, ShoppingBag, Store, Truck, UserRound } from "lucide-react";
+import { Bell, ClipboardList, Compass, Home, LayoutDashboard, MapPin, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -29,7 +29,7 @@ export default function PlatformShell({ children, active = "" }) {
     ["Panier", "/panier", ShoppingBag],
     ["Commandes", "/commandes", UserRound],
   ];
-  const restaurantItems = [["Fil", "/accueil", Home], ["Tableau de bord", "/espace-resto", LayoutDashboard], ["Publier", "/espace-resto/publier", Store], ["Livreurs", "/livreurs", Truck]];
+  const restaurantItems = [["Fil", "/accueil", Home], ["Tableau", "/espace-resto", LayoutDashboard], ["Profil", "/espace-resto/profil", UserRound]];
   const driverItems = [["Mes courses", "/espace-livreur", Truck], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
   const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
 
