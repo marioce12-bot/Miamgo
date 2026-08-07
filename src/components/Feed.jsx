@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, ensureCustomerProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, ensureCustomerProfile, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 
 const posts = [
@@ -97,10 +97,17 @@ export default function MiamgoFeed() {
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageErrors, setImageErrors] = useState([]);
+  const [role, setRole] = useState("client");
 
-  useEffect(() => onAuthStateChanged(auth, (session) => {
+  useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
-    if (session) ensureCustomerProfile(session).catch(console.error);
+    if (session) {
+      const profile = await getUserProfile(session.uid).catch(() => null);
+      if (profile?.role) setRole(profile.role);
+      else ensureCustomerProfile(session).catch(console.error);
+    } else {
+      setRole("client");
+    }
   }), []);
 
   useEffect(() => {
@@ -190,7 +197,7 @@ export default function MiamgoFeed() {
             <button onClick={() => requireAuth(() => router.push("/panier"))}><ShoppingBag size={20} />Mon panier <b>{cart.length || ""}</b></button>
             <button onClick={() => requireAuth(() => router.push("/profil?tab=favorites"))}><Bookmark size={20} />Mes favoris</button>
           </nav>
-          <div className="pro-card"><Sparkles size={21} /><strong>Votre resto sur Miamgo?</strong><p>Partagez vos plats avec les gourmands autour de vous.</p><a href="/inscription-resto">Créer ma boutique</a></div>
+          {role !== "restaurant_owner" && <div className="pro-card"><Sparkles size={21} /><strong>Votre resto sur Miamgo?</strong><p>Partagez vos plats avec les gourmands autour de vous.</p><a href="/inscription-resto">Créer ma boutique</a></div>}
         </aside>
 
         <section className="feed" id="feed">
