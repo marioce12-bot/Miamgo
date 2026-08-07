@@ -33,10 +33,22 @@ export async function registerProfile(user, profile) {
     displayName: profile.displayName,
     email: user.email || null,
     phone: profile.phone || null,
+    country: profile.country || "BJ",
+    city: profile.city || "Cotonou",
     role: profile.role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function updateProfileSettings(userId, changes) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "users", userId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function saveRestaurantIdentity(restaurantId, changes) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "restaurants", restaurantId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function setPostLike(userId, postId, isLiked) {
