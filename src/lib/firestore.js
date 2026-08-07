@@ -64,6 +64,19 @@ export async function saveRestaurantIdentity(restaurantId, changes) {
   await setDoc(doc(db, "restaurants", restaurantId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
 }
 
+export async function createRestaurantPost(ownerId, restaurantId, post) {
+  const { addDoc, collection, db, serverTimestamp } = await firestore();
+  return addDoc(collection(db, "posts"), {
+    ...post,
+    ownerId,
+    restaurantId,
+    likeCount: 0,
+    commentCount: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function setPostLike(userId, postId, isLiked) {
   const { db, deleteDoc, doc, serverTimestamp, setDoc } = await firestore();
   const likeRef = doc(db, "posts", String(postId), "likes", userId);

@@ -3,6 +3,7 @@ import "./interactive.css";
 import "./modals.css";
 import "./marketing.css";
 import "./theme.css";
+import MobileRoleNav from "../components/MobileRoleNav";
 
 export const metadata = {
   title: "Miamgo | Le fil qui donne faim",
@@ -12,7 +13,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>{children}<MobileRoleNav /></body>
     </html>
   );
 }
