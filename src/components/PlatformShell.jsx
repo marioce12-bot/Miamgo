@@ -8,7 +8,7 @@ export default function PlatformShell({ children, active = "" }) {
   const pathname = usePathname();
   const router = useRouter();
   const items = [
-    ["Accueil", "/", Home],
+    ["Accueil", "/accueil", Home],
     ["Explorer", "/explorer", Compass],
     ["Panier", "/panier", ShoppingBag],
     ["Commandes", "/commandes", UserRound],
@@ -17,8 +17,8 @@ export default function PlatformShell({ children, active = "" }) {
   return (
     <div className="platform-page">
       <header className="portal-header">
-        {pathname !== "/" && <button className="desktop-back" onClick={() => router.back()}>← Retour</button>}
-        <Link className="brand brand-with-logo" href="/"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></Link>
+        {pathname !== "/" && pathname !== "/accueil" && <button className="desktop-back" onClick={() => router.back()}>← Retour</button>}
+        <Link className="brand brand-with-logo" href="/accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></Link>
         <div className="portal-location"><MapPin size={16} /><span>Cotonou, Bénin</span></div>
         <div className="portal-actions"><Link className="notification-link" href="/profil?tab=notifications" aria-label="Notifications"><Bell size={19} /><b>2</b></Link><Link href="/profil">Mon profil</Link></div>
       </header>

@@ -86,6 +86,17 @@ export async function createOrder(customerId, order) {
   return { id: orderRef.id, serialNumber };
 }
 
+export async function createDriverApplication(userId, application) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "driverApplications", userId), {
+    ...application,
+    userId,
+    status: "pending",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export function serialiseCartItem(item) {
   return { id: item.id, name: item.name, price: item.price, quantity: item.quantity || 1 };
 }
