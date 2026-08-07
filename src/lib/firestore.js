@@ -27,6 +27,12 @@ export async function getUserProfile(userId) {
   return snapshot.exists() ? snapshot.data() : null;
 }
 
+export async function getOwnedRestaurant(userId) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "restaurants"), where("ownerId", "==", userId), limit(1)));
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
+
 export async function registerProfile(user, profile) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   await setDoc(doc(db, "users", user.uid), {

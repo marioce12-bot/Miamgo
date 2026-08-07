@@ -11,7 +11,7 @@ import { getUserProfile, updateProfileSettings } from "../../lib/firestore";
 
 export default function CustomerProfile() {
   const [user, setUser] = useState(null); const [profile, setProfile] = useState(null); const [settings, setSettings] = useState(false); const [notice, setNotice] = useState(""); const router = useRouter();
-  useEffect(() => onAuthStateChanged(auth, async (session) => { setUser(session); if (session) setProfile(await getUserProfile(session.uid).catch(() => null)); }), []);
+  useEffect(() => onAuthStateChanged(auth, async (session) => { setUser(session); if (!session) return; const data = await getUserProfile(session.uid).catch(() => null); if (data?.role === "restaurant_owner") { router.replace("/espace-resto"); return; } if (data?.role === "driver") { router.replace("/espace-livreur"); return; } setProfile(data); }), [router]);
   if (!user) return <PlatformShell><main className="content-wrap empty-state"><h2>Connectez-vous pour accéder à votre profil.</h2><button onClick={() => router.push("/connexion")}>Se connecter</button></main></PlatformShell>;
   const current = profile || { displayName: user.email?.split("@")[0] || "Mon compte", email: user.email || "", phone: "", city: "", country: "" };
   async function save(event) { event.preventDefault(); const form = new FormData(event.currentTarget); const changes = { displayName: form.get("name"), phone: form.get("phone"), city: form.get("city"), country: form.get("country") }; try { await updateProfileSettings(user.uid, changes); setProfile({ ...current, ...changes }); setNotice("Paramètres enregistrés."); } catch { setNotice("Impossible d'enregistrer les paramètres. Vérifiez les règles Firestore."); } }
