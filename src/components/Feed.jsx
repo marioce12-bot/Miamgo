@@ -15,15 +15,17 @@ import {
   Plus,
   Search,
   Send,
+  Share2,
   ShoppingBag,
   Sparkles,
   Store,
   UtensilsCrossed,
   X,
 } from "lucide-react";
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { addCartItem, addComment, ensureCustomerProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { shareFood } from "../lib/share";
 
 const posts = [
   {
@@ -35,7 +37,7 @@ const posts = [
     avatar: "CA",
     color: "#f9703e",
     text: "Le déjeuner est servi. Notre riz gras au poulet fumé sort tout juste de la cuisine, avec sa sauce maison.",
-    image: "https://i.ibb.co/1z6kV0D/miamgo-riz-gras.jpg",
+    image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=1000&q=85",
     dish: "Riz gras au poulet fumé",
     price: "2 500 FCFA",
     likes: 126,
@@ -51,7 +53,7 @@ const posts = [
     avatar: "CK",
     color: "#1967d2",
     text: "Aujourd'hui seulement: les spaghetti bolognaise à prix doux. Pensez à réserver avant 13h.",
-    image: "https://i.ibb.co/NrghWQX/miamgo-spaghetti.jpg",
+    image: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=1000&q=85",
     dish: "Spaghetti bolognaise",
     price: "1 800 FCFA",
     likes: 74,
@@ -66,7 +68,7 @@ const posts = [
     avatar: "MG",
     color: "#245d4c",
     text: "Vendredi braisé: poisson entier, alloco et piment vert. Livraison disponible ce soir.",
-    image: "https://i.ibb.co/3YyVpjX/miamgo-poisson.jpg",
+    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85",
     dish: "Poisson braisé & alloco",
     price: "3 000 FCFA",
     likes: 218,
@@ -203,9 +205,10 @@ export default function MiamgoFeed() {
             const isSaved = saved.includes(post.id);
             const postComments = comments[post.id] || [];
             const broken = imageErrors.includes(post.id);
-            return <article className="post-card" key={post.id}>
+            const sharePost = () => shareFood({ title: post.dish, restaurant: post.restaurant, imageUrl: post.image, url: `${window.location.origin}/accueil#post-${post.id}` });
+            return <article className="post-card" id={`post-${post.id}`} key={post.id}>
               {post.promoted && <div className="sponsored"><Sparkles size={14} /> En ce moment près de vous</div>}
-              <div className="post-head"><span className="restaurant-avatar" style={{ backgroundColor: post.color }}>{post.avatar}</span><div><strong>{post.restaurant}</strong><p>{post.handle} <span>·</span> {post.time}</p><small><MapPin size={12} />{post.location}</small></div><button className="more" onClick={() => navigator.share?.({ title: post.dish, text: post.text }).catch(() => {})}>•••</button></div>
+              <div className="post-head"><button className="restaurant-avatar" style={{ backgroundColor: post.color }} onClick={() => router.push("/restaurant/chez-aicha")} aria-label={`Voir ${post.restaurant}`}>{post.avatar}</button><div><button className="restaurant-name" onClick={() => router.push("/restaurant/chez-aicha")}>{post.restaurant}</button><p>{post.handle} <span>·</span> {post.time}</p><small><MapPin size={12} />{post.location}</small></div><button className="more" onClick={sharePost}><Share2 size={18} /></button></div>
               <p className="post-copy">{post.text}</p>
               <div className={`food-image ${broken ? "image-fallback" : ""}`} style={broken ? { background: `linear-gradient(135deg, ${post.color}, #ffc66b)` } : undefined}>
                 {!broken && <img src={post.image} alt={post.dish} onError={() => setImageErrors((current) => [...current, post.id])} />}
@@ -217,6 +220,7 @@ export default function MiamgoFeed() {
                 <button className={isLiked ? "liked" : ""} onClick={() => requireAuth(() => toggleLike(post.id))}><Heart size={20} fill={isLiked ? "currentColor" : "none"} />J&apos;aime</button>
                 <button onClick={() => requireAuth(() => setCommenting(post.id))}><MessageCircle size={20} />Commenter</button>
                 <button className={isSaved ? "saved" : ""} onClick={() => requireAuth(() => toggleSave(post.id))}><Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />Sauvegarder</button>
+                <button onClick={sharePost}><Share2 size={20} />Partager</button>
               </div>
               {commenting === post.id && <form className="comment-form" onSubmit={(event) => submitComment(event, post.id)}><input name="comment" autoFocus placeholder="Écrivez un commentaire..." /><button aria-label="Envoyer"><Send size={17} /></button></form>}
               {postComments.map((comment, index) => <p className="comment" key={index}><b>Vous</b>{comment}</p>)}
