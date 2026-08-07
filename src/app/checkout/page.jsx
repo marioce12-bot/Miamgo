@@ -16,6 +16,7 @@ export default function CheckoutPage() {
   const [selfAddress, setSelfAddress] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [recipientArea, setRecipientArea] = useState("");
+  const [scheduledFor, setScheduledFor] = useState("");
   useEffect(() => onAuthStateChanged(auth, (session) => { setUser(session); if (session) ensureCustomerProfile(session).catch(console.error); }), []);
   async function beginOrder() {
     if (!user) { setOrderStatus("Connectez-vous depuis le fil Miamgo avant de confirmer votre commande."); return; }
@@ -24,7 +25,7 @@ export default function CheckoutPage() {
     setOrderStatus("Création de votre commande...");
     try {
       const deliveryDetails = recipient === "other" ? { recipientType: "other", recipientPhone, recipientArea } : { recipientType: "self", address: selfAddress };
-      const order = await createOrder(user.uid, { restaurantId: "chez-aicha", restaurantName: "Chez Aïcha", fulfillmentType: delivery, deliveryDetails, items: [{ id: "riz-gras-poulet", name: "Riz gras au poulet fumé", price: 2500, quantity: 1 }, { id: "bissap", name: "Jus de bissap maison", price: 500, quantity: 1 }], amount: 3000, currency: "XOF" });
+      const order = await createOrder(user.uid, { restaurantId: "chez-aicha", restaurantName: "Chez Aïcha", fulfillmentType: delivery, deliveryDetails, scheduledFor: scheduledFor || null, items: [{ id: "riz-gras-poulet", name: "Riz gras au poulet fumé", price: 2500, quantity: 1 }, { id: "bissap", name: "Jus de bissap maison", price: 500, quantity: 1 }], amount: 3000, currency: "XOF" });
       setOrderStatus(`Commande ${order.serialNumber} créée. Le paiement FedaPay sera ajouté à l'étape suivante.`);
     } catch { setOrderStatus("Impossible de créer la commande. Vérifiez que Firestore est activé."); }
   }
