@@ -84,9 +84,19 @@ export async function createRestaurant(ownerId, restaurant) {
     ...restaurant,
     ownerId,
     status: "pending",
+    subscriptionStatus: "unpaid",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function updateRestaurantPlan(restaurantId, plan) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "restaurants", restaurantId), {
+    plan,
+    subscriptionStatus: "unpaid",
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function createOrder(customerId, order) {
