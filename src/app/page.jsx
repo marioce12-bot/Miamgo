@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { addCartItem, addComment, ensureCustomerProfile, saveFavorite, setPostLike } from "../lib/firestore";
 
 const posts = [
   {
@@ -93,7 +94,10 @@ export default function MiamgoFeed() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageErrors, setImageErrors] = useState([]);
 
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
+  useEffect(() => onAuthStateChanged(auth, (session) => {
+    setUser(session);
+    if (session) ensureCustomerProfile(session).catch(console.error);
+  }), []);
 
   useEffect(() => {
     if (user && pendingAction) {
@@ -134,15 +138,21 @@ export default function MiamgoFeed() {
   }
 
   function toggleLike(id) {
-    setLiked((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    const isLiked = !liked.includes(id);
+    setLiked((current) => isLiked ? [...current, id] : current.filter((item) => item !== id));
+    setPostLike(user.uid, id, isLiked).catch(console.error);
   }
 
   function toggleSave(id) {
-    setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+    const isSaved = !saved.includes(id);
+    const post = posts.find((item) => item.id === id);
+    setSaved((current) => isSaved ? [...current, id] : current.filter((item) => item !== id));
+    saveFavorite(user.uid, post.restaurant.toLowerCase().replaceAll(" ", "-"), isSaved).catch(console.error);
   }
 
   function addToCart(post) {
     setCart((current) => [...current, post]);
+    addCartItem(user.uid, post).catch(console.error);
   }
 
   function submitComment(event, postId) {
@@ -150,6 +160,7 @@ export default function MiamgoFeed() {
     const text = new FormData(event.currentTarget).get("comment")?.trim();
     if (!text) return;
     setComments((current) => ({ ...current, [postId]: [...(current[postId] || []), text] }));
+    addComment(user.uid, postId, text).catch(console.error);
     setCommenting(null);
   }
 
@@ -158,7 +169,7 @@ export default function MiamgoFeed() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#feed" aria-label="Miamgo accueil"><span>miam</span>go<i>.</i></a>
+        <a className="brand brand-with-logo" href="#feed" aria-label="Miamgo accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></a>
         <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un plat, un resto..." /></label>
         <nav className="desktop-actions">
           <button className="icon-button"><Bell size={20} /><span className="badge">3</span></button>
@@ -175,7 +186,7 @@ export default function MiamgoFeed() {
             <button onClick={() => requireAuth(() => setCart((current) => current))}><ShoppingBag size={20} />Mon panier <b>{cart.length || ""}</b></button>
             <button onClick={() => requireAuth(() => setSaved((current) => current))}><Bookmark size={20} />Mes favoris</button>
           </nav>
-          <div className="pro-card"><Sparkles size={21} /><strong>Votre resto sur Miamgo?</strong><p>Partagez vos plats avec les gourmands autour de vous.</p><button>Créer ma boutique</button></div>
+          <div className="pro-card"><Sparkles size={21} /><strong>Votre resto sur Miamgo?</strong><p>Partagez vos plats avec les gourmands autour de vous.</p><a href="/inscription-resto">Créer ma boutique</a></div>
         </aside>
 
         <section className="feed" id="feed">

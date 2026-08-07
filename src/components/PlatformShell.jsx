@@ -12,7 +12,7 @@ export default function PlatformShell({ children, active = "" }) {
   return (
     <div className="platform-page">
       <header className="portal-header">
-        <Link className="brand" href="/"><span>miam</span>go<i>.</i></Link>
+        <Link className="brand brand-with-logo" href="/"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></Link>
         <div className="portal-location"><MapPin size={16} /><span>Cotonou, Bénin</span></div>
         <div className="portal-actions"><button aria-label="Notifications"><Bell size={19} /><b>2</b></button><Link href="/commandes">Mes commandes</Link></div>
       </header>
