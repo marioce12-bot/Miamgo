@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ClipboardList, Compass, Home, LayoutDashboard, MapPin, ShoppingBag, Truck, UserRound } from "lucide-react";
+import { Bell, ClipboardList, Compass, Home, LayoutDashboard, MapPin, Menu, PackageCheck, Plus, ShoppingBag, Store, Truck, UserRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -23,15 +23,11 @@ export default function PlatformShell({ children, active = "" }) {
     if (profile?.role) setRole(profile.role);
     if (profile?.role !== "restaurant_owner" && await getOwnedRestaurant(user.uid).catch(() => null)) { setProfileLink("/espace-resto"); setRole("restaurant_owner"); }
   }), []);
-  const customerItems = [
-    ["Accueil", "/accueil", Home],
-    ["Explorer", "/explorer", Compass],
-    ["Panier", "/panier", ShoppingBag],
-    ["Commandes", "/commandes", UserRound],
-  ];
-  const restaurantItems = [["Fil", "/accueil", Home], ["Tableau", "/espace-resto", LayoutDashboard], ["Profil", "/espace-resto/profil", UserRound]];
-  const driverItems = [["Mes courses", "/espace-livreur", Truck], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
-  const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
+  const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
+  const restaurantItems = [["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Fil", "/accueil", Home], ["Plus", "/espace-resto/plus", Menu]];
+  const isRestaurant = role === "restaurant_owner";
+  const items = isRestaurant ? restaurantItems : customerItems;
+  const currentItem = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <div className="platform-page">
@@ -41,10 +37,12 @@ export default function PlatformShell({ children, active = "" }) {
         <div className="portal-location"><MapPin size={16} /><span>{location.city}, {location.country}</span></div>
         <div className="portal-actions"><Link className="notification-link" href={profileLink} aria-label="Notifications"><Bell size={19} /><b>2</b></Link><Link href={profileLink}>Mon profil</Link></div>
       </header>
+      {isRestaurant && <aside className="restaurant-desktop-nav"><p className="eyebrow">ESPACE RESTAURANT</p>{[["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Fil Miamgo", "/accueil", Home], ["Publications", "/espace-resto/publier", ClipboardList], ["Statistiques", "/espace-resto/plus", LayoutDashboard], ["Profil boutique", "/espace-resto/profil", UserRound], ["Abonnement", "/espace-resto/plus", Bell]].map(([label, href, Icon]) => <Link className={currentItem(href) ? "active" : ""} href={href} key={label}><Icon size={17}/>{label}</Link>)}</aside>}
       {children}
-      {role === "client" && <nav className="portal-mobile-nav">
-        {items.map(([label, href, Icon]) => <Link className={active === label ? "active" : ""} href={href} key={label}><Icon size={21} /><span>{label}</span></Link>)}
+      {role !== "driver" && <nav className={`portal-mobile-nav ${isRestaurant ? "restaurant-mobile-nav" : ""}`}>
+        {items.map(([label, href, Icon]) => <Link className={currentItem(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Commandes" && isRestaurant && <i>3</i>}<span>{label}</span></Link>)}
       </nav>}
+      {isRestaurant && (pathname === "/espace-resto/commandes" || pathname === "/espace-resto/menu") && <Link className="restaurant-fab" href={pathname === "/espace-resto/menu" ? "/espace-resto/menu?create=1" : "/espace-resto/publier"}><Plus size={23} /></Link>}
     </div>
   );
 }
