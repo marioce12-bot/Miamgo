@@ -171,7 +171,7 @@ export default function MiamgoFeed() {
           <div className="location-card"><MapPin size={18} /><div><small>Votre position</small><strong>Cotonou, Bénin</strong></div><ChevronRight size={17} /></div>
           <nav className="side-nav">
             <a className="active" href="#feed"><HomeIcon size={20} />Actualités</a>
-            <a href="#restaurants"><Store size={20} />Restaurants</a>
+            <a href="/explorer"><Store size={20} />Restaurants</a>
             <button onClick={() => requireAuth(() => setCart((current) => current))}><ShoppingBag size={20} />Mon panier <b>{cart.length || ""}</b></button>
             <button onClick={() => requireAuth(() => setSaved((current) => current))}><Bookmark size={20} />Mes favoris</button>
           </nav>
@@ -214,13 +214,13 @@ export default function MiamgoFeed() {
         </section>
 
         <aside className="right-sidebar" id="restaurants">
-          <div className="sidebar-title"><h2>Restaurants populaires</h2><a href="#feed">Voir tout</a></div>
+          <div className="sidebar-title"><h2>Restaurants populaires</h2><a href="/explorer">Voir tout</a></div>
           <div className="restaurant-list">{restaurants.map(([name, rating, distance, initials, color]) => <article key={name}><span style={{ backgroundColor: color }}>{initials}</span><div><strong>{name}</strong><p><b>★ {rating}</b> · {distance}</p></div><button onClick={() => requireAuth(() => {})}>Suivre</button></article>)}</div>
-          <div className="tip-card"><span>MIAMGO CONSEIL</span><h3>Commandez avant midi pour être livré à l&apos;heure du déjeuner.</h3><a href="#feed">Découvrir les plats <ChevronRight size={16} /></a></div>
+          <div className="tip-card"><span>MIAMGO CONSEIL</span><h3>Commandez avant midi pour être livré à l&apos;heure du déjeuner.</h3><a href="/explorer">Découvrir les plats <ChevronRight size={16} /></a></div>
         </aside>
       </div>
 
-      <nav className="mobile-nav"><a className="active" href="#feed"><HomeIcon size={22} /><span>Accueil</span></a><a href="#restaurants"><Search size={22} /><span>Explorer</span></a><button onClick={() => requireAuth(() => setCart((current) => current))}><ShoppingBag size={22} /><span>Panier</span>{cart.length > 0 && <i>{cart.length}</i>}</button><button onClick={() => requireAuth(() => setSaved((current) => current))}><Bookmark size={22} /><span>Sauvegardés</span></button><button onClick={() => user ? signOut(auth) : setShowLogin(true)}><CircleUserRound size={22} /><span>Profil</span></button></nav>
+      <nav className="mobile-nav"><a className="active" href="#feed"><HomeIcon size={22} /><span>Accueil</span></a><a href="/explorer"><Search size={22} /><span>Explorer</span></a><button onClick={() => requireAuth(() => setCart((current) => current))}><ShoppingBag size={22} /><span>Panier</span>{cart.length > 0 && <i>{cart.length}</i>}</button><button onClick={() => requireAuth(() => setSaved((current) => current))}><Bookmark size={22} /><span>Sauvegardés</span></button><button onClick={() => user ? signOut(auth) : setShowLogin(true)}><CircleUserRound size={22} /><span>Profil</span></button></nav>
 
       {showLogin && <div className="modal-backdrop" role="presentation"><section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title"><button className="modal-close" onClick={() => setShowLogin(false)} aria-label="Fermer"><X size={20} /></button><div className="login-mark">m<span>go</span></div><p className="eyebrow">BIENVENUE SUR MIAMGO</p><h2 id="login-title">{authMode === "login" ? "Connectez-vous pour continuer" : "Créez votre compte gourmand"}</h2><p className="modal-text">Votre action vous attend juste après la connexion.</p><form onSubmit={handleAuth}><label>Adresse e-mail<input type="email" name="email" required placeholder="vous@exemple.com" /></label><label>Mot de passe<input type="password" name="password" required minLength="6" placeholder="6 caractères minimum" /></label>{authError && <p className="auth-error">{authError}</p>}<button className="submit-auth" disabled={isSubmitting}>{isSubmitting ? "Connexion..." : authMode === "login" ? "Se connecter" : "Créer mon compte"}</button></form><button className="switch-auth" onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}>{authMode === "login" ? "Pas encore de compte? S'inscrire" : "Déjà un compte? Se connecter"}</button></section></div>}
     </main>
