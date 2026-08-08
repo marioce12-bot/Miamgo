@@ -30,3 +30,7 @@ Les regles de securite sont dans [`firestore.rules`](firestore.rules) et les ind
 Les collections utilisees sont `users`, `restaurants`, `posts`, `favorites`, `carts`, `orders` et `notifications`. Un client ne peut acceder qu'a son propre profil, panier, favoris et commandes. Les donnees restaurant sont protegees par le champ `ownerId`.
 
 Pour publier exactement les regles du depot avec Firebase CLI: `npx firebase-tools login`, puis `npx firebase-tools use miamgo-2479d` et `npx firebase-tools deploy --only firestore`. Sans cette publication, Firebase Authentication peut creer un e-mail mais Firestore refusera la creation du profil associe.
+
+## Administration
+
+La console web séparée est disponible à `/admin`. Configurez `MIAMGO_ADMIN_PASSWORD` dans les variables Vercel. Le mot de passe ne doit jamais être écrit dans Git. Cette page n'est pas liée depuis l'application mobile.
