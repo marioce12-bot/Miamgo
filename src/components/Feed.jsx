@@ -98,6 +98,7 @@ export default function MiamgoFeed() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageErrors, setImageErrors] = useState([]);
   const [role, setRole] = useState("client");
+  const [roleReady, setRoleReady] = useState(false);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
@@ -108,6 +109,7 @@ export default function MiamgoFeed() {
     } else {
       setRole("client");
     }
+    setRoleReady(true);
   }), []);
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function MiamgoFeed() {
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${roleReady ? "" : "role-feed-loading"}`}>
       <header className="topbar">
         <a className="brand brand-with-logo" href="/accueil" aria-label="Miamgo accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></a>
         <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un plat, un resto..." /></label>
@@ -189,7 +191,7 @@ export default function MiamgoFeed() {
       </header>
 
       <div className="layout">
-        <aside className="left-sidebar">
+          {role === "restaurant_owner" ? <aside className="restaurant-feed-sidebar"><p className="eyebrow">ESPACE RESTAURANT</p><a className="active" href="/accueil"><HomeIcon size={19} />Fil Miamgo</a><a href="/espace-resto/commandes"><ShoppingBag size={19} />Commandes <b>3</b></a><a href="/espace-resto/menu"><Store size={19} />Mon menu</a><a href="/espace-resto/publier"><Sparkles size={19} />Publications</a><a href="/espace-resto/profil"><CircleUserRound size={19} />Profil boutique</a></aside> : <aside className="left-sidebar">
           <div className="location-card"><MapPin size={18} /><div><small>Votre position</small><strong>Cotonou, Bénin</strong></div><ChevronRight size={17} /></div>
           <nav className="side-nav">
             <a className="active" href="#feed"><HomeIcon size={20} />Actualités</a>
@@ -198,10 +200,10 @@ export default function MiamgoFeed() {
             <button onClick={() => requireAuth(() => router.push("/profil?tab=favorites"))}><Bookmark size={20} />Mes favoris</button>
           </nav>
           {role !== "restaurant_owner" && <div className="pro-card"><Sparkles size={21} /><strong>Votre resto sur Miamgo?</strong><p>Partagez vos plats avec les gourmands autour de vous.</p><a href="/inscription-resto">Créer ma boutique</a></div>}
-        </aside>
+          </aside>}
 
         <section className="feed" id="feed">
-          <div className="feed-intro"><div><p className="eyebrow">Autour de vous</p><h1>Qu&apos;est-ce qui vous fait envie?</h1></div><button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> Filtrer</button></div>
+          <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? "FIL MIAMGO" : "AUTOUR DE VOUS"}</p><h1>{role === "restaurant_owner" ? "Découvrez la plateforme." : "Qu&apos;est-ce qui vous fait envie?"}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> Filtrer</button>}</div>
           <div className="restaurant-stories">
             {restaurants.map(([name, rating, distance, initials, color, image]) => <button className="restaurant-story" key={name} onClick={() => router.push("/restaurant/chez-aicha")}><img src={image} alt={`Plat de ${name}`} /><span className="story-shade" /><b style={{ backgroundColor: color }}>{initials}</b><div><strong>{name}</strong><small>★ {rating} · {distance}</small></div></button>)}
           </div>
@@ -236,11 +238,11 @@ export default function MiamgoFeed() {
           {visiblePosts.length === 0 && <div className="empty-state"><UtensilsCrossed size={34} /><h2>Aucun plat trouvé</h2><p>Essayez un autre mot-clé.</p></div>}
         </section>
 
-        <aside className="right-sidebar" id="restaurants">
+        {role !== "restaurant_owner" && <aside className="right-sidebar" id="restaurants">
           <div className="sidebar-title"><h2>Restaurants populaires</h2><a href="/explorer">Voir tout</a></div>
           <div className="restaurant-list">{restaurants.map(([name, rating, distance, initials, color]) => <article key={name}><span style={{ backgroundColor: color }}>{initials}</span><div><strong>{name}</strong><p><b>★ {rating}</b> · {distance}</p></div><button onClick={() => requireAuth(() => alert(`${name} est maintenant dans vos favoris.`))}>Suivre</button></article>)}</div>
           <div className="tip-card"><span>MIAMGO CONSEIL</span><h3>Commandez avant midi pour être livré à l&apos;heure du déjeuner.</h3><a href="/explorer">Découvrir les plats <ChevronRight size={16} /></a></div>
-        </aside>
+        </aside>}
       </div>
 
 
