@@ -13,6 +13,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
+      <head><link rel="preload" as="image" href="/miamgo-logo.png" fetchPriority="high" /></head>
       <body>{children}<MobileRoleNav /></body>
     </html>
   );

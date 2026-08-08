@@ -10,6 +10,7 @@ const choices = [
   ["grillades", "Grillades", "18 restaurants", "https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=500&q=85"],
   ["pates", "Pâtes", "24 restaurants", "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=500&q=85"],
   ["petit-dejeuner", "Petit-déjeuner", "12 restaurants", "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=500&q=85"],
+  ["cocktails", "Cocktails", "15 restaurants", "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=500&q=85"],
 ];
 const results = [["Chez Aïcha", "Riz gras, sauces et grillades", "4.8", "25-35 min", "Cadjèhoun", "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=700&q=85"], ["Mami Grill", "Poisson braisé, alloco", "4.9", "30-40 min", "Fidjrossè", "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=700&q=85"], ["Le Comptoir de Koffi", "Pâtes et plats du jour", "4.6", "20-30 min", "Akpakpa", "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=700&q=85"]];
 
