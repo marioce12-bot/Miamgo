@@ -203,7 +203,7 @@ export default function MiamgoFeed() {
           </aside>}
 
         <section className="feed" id="feed">
-          <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? "FIL MIAMGO" : "AUTOUR DE VOUS"}</p><h1>{role === "restaurant_owner" ? "Découvrez la plateforme." : "Qu&apos;est-ce qui vous fait envie?"}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> Filtrer</button>}</div>
+          <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? "FIL MIAMGO" : "AUTOUR DE VOUS"}</p><h1>{role === "restaurant_owner" ? "Découvrez la plateforme." : "Qu'est-ce qui vous fait envie?"}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> Filtrer</button>}</div>
           <div className="restaurant-stories">
             {restaurants.map(([name, rating, distance, initials, color, image]) => <button className="restaurant-story" key={name} onClick={() => router.push("/restaurant/chez-aicha")}><img src={image} alt={`Plat de ${name}`} /><span className="story-shade" /><b style={{ backgroundColor: color }}>{initials}</b><div><strong>{name}</strong><small>★ {rating} · {distance}</small></div></button>)}
           </div>
