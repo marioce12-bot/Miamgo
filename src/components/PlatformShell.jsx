@@ -27,10 +27,11 @@ export default function PlatformShell({ children, active = "", publicPage = fals
   }), []);
   const isRestaurant = role === "restaurant_owner";
   const isPublicAuth = pathname === "/connexion" || pathname.startsWith("/inscription-");
+  const authType = pathname.includes("inscription-resto") ? "restaurant-auth" : pathname.includes("inscription-livreur") ? "driver-auth" : pathname.includes("inscription-client") ? "client-auth" : "";
   const currentItem = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className={`platform-page ${isRestaurant ? "restaurant-shell" : ""} ${isPublicAuth ? "public-auth-page" : ""}`}>
+    <div className={`platform-page ${isRestaurant ? "restaurant-shell" : ""} ${isPublicAuth ? "public-auth-page" : ""} ${authType}`}>
       <header className="portal-header">
         {pathname !== "/" && pathname !== "/accueil" && <button className="desktop-back" onClick={() => router.replace(isRestaurant ? "/espace-resto" : "/accueil")}>← Retour</button>}
         <Link className="brand brand-with-logo" href="/accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /></Link>
