@@ -29,7 +29,9 @@ service cloud.firestore {
     }
 
     match /restaurants/{restaurantId} {
-      allow read: if resource.data.status == 'active' || isRestaurantOwner(restaurantId) || isPlatformAdmin();
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerId == request.auth.uid)
+        || isPlatformAdmin();
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'pending';
