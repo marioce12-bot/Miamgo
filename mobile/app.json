@@ -7,10 +7,24 @@
     "icon": "./assets/icon.png",
     "scheme": "miamgo",
     "plugins": [
-      ["expo-camera", { "cameraPermission": "Miamgo utilise la caméra pour scanner les QR codes des commandes." }],
-      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#ef6a38" }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Miamgo utilise la caméra pour scanner les QR codes des commandes."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ef6a38"
+        }
+      ]
     ],
-    "permissions": ["CAMERA", "POST_NOTIFICATIONS"],
+    "permissions": [
+      "CAMERA",
+      "POST_NOTIFICATIONS"
+    ],
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -21,10 +35,21 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.miamgo.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0549edcf-eaa6-4896-8dd2-5e52793d0ac3"
+      }
+    },
+    "owner": "go-africa"
   }
 }
