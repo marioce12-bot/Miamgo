@@ -10,6 +10,7 @@ import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
 
 const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
 const restaurantItems = [["Fil", "/accueil", Home], ["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Plus", "/espace-resto/plus", Menu]];
+const driverItems = [["Accueil", "/espace-livreur", Home], ["Historique", "/espace-livreur/historique", ClipboardList], ["Scanner", "/espace-livreur/scanner", Truck], ["Profil", "/espace-livreur/profil", UserRound]];
 
 export default function MobileRoleNav() {
   const pathname = usePathname();
@@ -21,8 +22,8 @@ export default function MobileRoleNav() {
     setRole(profile?.role === "driver" ? "driver" : profile?.role === "restaurant_owner" || ownsRestaurant ? "restaurant_owner" : "client");
   }), []);
   const publicPaths = ["/", "/connexion", "/inscription-client", "/inscription-resto", "/inscription-livreur"];
-  if (!role || role === "driver" || publicPaths.includes(pathname)) return null;
-  const items = role === "restaurant_owner" ? restaurantItems : customerItems;
+  if (!role || publicPaths.includes(pathname)) return null;
+  const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
   const isActive = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
-  return <nav className={`portal-mobile-nav ${role === "restaurant_owner" ? "restaurant-mobile-nav" : ""}`}>{items.map(([label, href, Icon]) => <Link className={isActive(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Commandes" && role === "restaurant_owner" && <i>3</i>}<span>{label}</span></Link>)}</nav>;
+  return <nav className={`portal-mobile-nav ${role === "restaurant_owner" ? "restaurant-mobile-nav" : role === "driver" ? "driver-mobile-nav" : ""}`}>{items.map(([label, href, Icon]) => <Link className={isActive(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Commandes" && role === "restaurant_owner" && <i>3</i>}<span>{label}</span></Link>)}</nav>;
 }
