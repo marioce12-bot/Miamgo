@@ -19,6 +19,10 @@ Les likes, commentaires, favoris, panier et commandes sont proteges. Lorsqu'un v
 
 Le cahier des charges produit est disponible dans [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md).
 
+## Application mobile
+
+Le projet Expo React Native est dans [`mobile/`](mobile/). Il partage le projet Firebase Miamgo avec le site Next.js. Lancez-le avec `cd mobile` puis `npx expo start`.
+
 ## Firestore
 
 Les regles de securite sont dans [`firestore.rules`](firestore.rules) et les index dans [`firestore.indexes.json`](firestore.indexes.json). Activez Cloud Firestore, puis copiez les regles dans **Firestore Database > Rules** de Firebase Console.
