@@ -34,3 +34,7 @@ Pour publier exactement les regles du depot avec Firebase CLI: `npx firebase-too
 ## Administration
 
 La console web séparée est disponible à `/admin`. Configurez `MIAMGO_ADMIN_PASSWORD` dans les variables Vercel. Le mot de passe ne doit jamais être écrit dans Git. Cette page n'est pas liée depuis l'application mobile.
+
+## Paiements
+
+Les frais de commande sont calculés par `src/lib/orderFees.js`: 100 FCFA jusqu'à 2 000 FCFA, 150 FCFA jusqu'à 10 000 FCFA, puis 200 FCFA. Les routes serveur `/api/fedapay/create-transaction` et `/api/fedapay/webhook` gardent la clé FedaPay hors du navigateur. Activez et configurez les payouts/marketplace FedaPay avant d'activer les transferts vers les bénéficiaires restaurant et livreur.

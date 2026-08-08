@@ -85,6 +85,10 @@ service cloud.firestore {
         && (isRestaurantOwner(resource.data.restaurantId) || isPlatformAdmin());
     }
 
+    match /paymentEvents/{eventId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
     match /notifications/{notificationId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
       allow update: if signedIn()
