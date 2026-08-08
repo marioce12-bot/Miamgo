@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
-  if (request.cookies.get("miamgo_admin")?.value !== "authenticated") return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  if (request.cookies.get("miamgo_admin")?.value !== "authenticated") return NextResponse.json({ error: "Non autorisé." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   try {
     const db = getAdminDb();
     const auth = getAdminAuth();
@@ -20,8 +23,8 @@ export async function GET(request) {
       const profile = await db.collection("users").doc(user.uid).get();
       return { uid: user.uid, email: user.email || "", disabled: user.disabled, createdAt: user.metadata.creationTime, ...(profile.exists ? profile.data() : {}) };
     }));
-    return NextResponse.json({ counts: { users: users.users.length, restaurants: restaurants.size, orders: orders.size, drivers: drivers.size, suspended: users.users.filter((user) => user.disabled).length }, finance: { subscriptionRevenue, orderFees, totalRevenue: subscriptionRevenue + orderFees, paidOrders: paidOrders.length, paidSubscriptions: subscriptions.docs.filter((item) => ["paid", "active", "completed"].includes(item.data().status || item.data().paymentStatus)).length }, users: profiles, restaurants: restaurants.docs.slice(0, 100).map((item) => ({ id: item.id, ...item.data() })), drivers: drivers.docs.slice(0, 100).map((item) => ({ id: item.id, ...item.data() })) });
+    return NextResponse.json({ counts: { users: users.users.length, restaurants: restaurants.size, orders: orders.size, drivers: drivers.size, suspended: users.users.filter((user) => user.disabled).length }, finance: { subscriptionRevenue, orderFees, totalRevenue: subscriptionRevenue + orderFees, paidOrders: paidOrders.length, paidSubscriptions: subscriptions.docs.filter((item) => ["paid", "active", "completed"].includes(item.data().status || item.data().paymentStatus)).length }, users: profiles, restaurants: restaurants.docs.slice(0, 100).map((item) => ({ id: item.id, ...item.data() })), drivers: drivers.docs.slice(0, 100).map((item) => ({ id: item.id, ...item.data() })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "Firebase Admin non configuré." }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Firebase Admin non configuré.", code: "ADMIN_FIREBASE_ERROR" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }
