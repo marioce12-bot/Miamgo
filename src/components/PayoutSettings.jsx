@@ -1,0 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { Save } from "lucide-react";
+import { savePayoutDetails } from "../lib/firestore";
+import { auth } from "../lib/firebase";
+
+export default function PayoutSettings({ collectionName, documentId, title }) { const [status,setStatus]=useState(""); async function submit(event){event.preventDefault();const data=new FormData(event.currentTarget);const id=documentId === "current-user" ? auth.currentUser?.uid : documentId;if(!id){setStatus("Connectez-vous pour enregistrer le bénéficiaire.");return;}try{await savePayoutDetails(collectionName,id,{firstName:data.get("firstName"),lastName:data.get("lastName"),country:data.get("country"),operator:data.get("operator"),phone:data.get("phone")});setStatus("Bénéficiaire enregistré et envoyé pour vérification.");}catch{setStatus("Impossible d'enregistrer. Vérifiez les règles Firestore.");}} return <form className="payout-form" onSubmit={submit}><h2>{title}</h2><p>Ces informations serviront aux reversements Mobile Money après confirmation du paiement.</p><label>Prénom<input name="firstName" required /></label><label>Nom<input name="lastName" required /></label><label>Pays<select name="country" defaultValue="BJ"><option value="BJ">Bénin</option><option value="CI">Côte d&apos;Ivoire</option><option value="TG">Togo</option><option value="GH">Ghana</option><option value="NG">Nigeria</option><option value="SN">Sénégal</option></select></label><label>Opérateur Mobile Money<input name="operator" required placeholder="MTN, Moov, Orange..." /></label><label>Numéro de dépôt<input name="phone" required placeholder="+229 00 00 00 00" /></label><button><Save size={16}/>Enregistrer le bénéficiaire</button>{status&&<small>{status}</small>}</form>; }

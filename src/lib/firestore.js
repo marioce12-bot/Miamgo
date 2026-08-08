@@ -64,6 +64,11 @@ export async function saveRestaurantIdentity(restaurantId, changes) {
   await setDoc(doc(db, "restaurants", restaurantId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
 }
 
+export async function savePayoutDetails(collectionName, id, details) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, collectionName, id), { payoutDetails: details, payoutStatus: "pending_verification", updatedAt: serverTimestamp() }, { merge: true });
+}
+
 export async function createRestaurantPost(ownerId, restaurantId, post) {
   const { addDoc, collection, db, serverTimestamp } = await firestore();
   return addDoc(collection(db, "posts"), {
