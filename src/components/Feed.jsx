@@ -77,9 +77,9 @@ const posts = [
 ];
 
 const restaurants = [
-  ["La Terrasse", "4.8", "À 1,2 km", "LT", "#d14b41"],
-  ["Sawa Kitchen", "4.6", "À 2,4 km", "SK", "#ea9c28"],
-  ["Bénin Délices", "4.9", "À 3,1 km", "BD", "#4a7558"],
+  ["La Terrasse", "4.8", "À 1,2 km", "LT", "#d14b41", "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=500&q=85"],
+  ["Sawa Kitchen", "4.6", "À 2,4 km", "SK", "#ea9c28", "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=500&q=85"],
+  ["Bénin Délices", "4.9", "À 3,1 km", "BD", "#4a7558", "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=500&q=85"],
 ];
 
 export default function MiamgoFeed() {
@@ -202,9 +202,8 @@ export default function MiamgoFeed() {
 
         <section className="feed" id="feed">
           <div className="feed-intro"><div><p className="eyebrow">Autour de vous</p><h1>Qu&apos;est-ce qui vous fait envie?</h1></div><button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> Filtrer</button></div>
-          <div className="story-row">
-            <button className="story create-story" onClick={() => requireAuth(() => router.push("/inscription-resto"))}><span><Plus size={20} /></span><small>Partager une envie</small></button>
-            {restaurants.map(([name, rating, distance, initials, color]) => <button className="story" key={name} onClick={() => router.push("/explorer")}><span style={{ backgroundColor: color }}>{initials}</span><small>{name}</small><em>{rating} · {distance}</em></button>)}
+          <div className="restaurant-stories">
+            {restaurants.map(([name, rating, distance, initials, color, image]) => <button className="restaurant-story" key={name} onClick={() => router.push("/restaurant/chez-aicha")}><img src={image} alt={`Plat de ${name}`} /><span className="story-shade" /><b style={{ backgroundColor: color }}>{initials}</b><div><strong>{name}</strong><small>★ {rating} · {distance}</small></div></button>)}
           </div>
 
           {visiblePosts.map((post) => {
