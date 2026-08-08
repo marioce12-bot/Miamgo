@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Compass, Home, Menu, PackageCheck, ShoppingBag, Store, Truck, UserRound } from "lucide-react";
+import { BarChart3, ClipboardList, Compass, Home, Menu, Navigation, PackageCheck, ScanLine, ShoppingBag, Store, Truck, UserRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -10,7 +10,7 @@ import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
 
 const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
 const restaurantItems = [["Fil", "/accueil", Home], ["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Plus", "/espace-resto/plus", Menu]];
-const driverItems = [["Accueil", "/espace-livreur", Home], ["Historique", "/espace-livreur/historique", ClipboardList], ["Scanner", "/espace-livreur/scanner", Truck], ["Profil", "/espace-livreur/profil", UserRound]];
+const driverItems = [["Accueil", "/espace-livreur", Home], ["En cours", "/espace-livreur/en-cours", Navigation], ["Scanner", "/espace-livreur/scanner", ScanLine], ["Historique", "/espace-livreur/historique", ClipboardList], ["Revenus", "/espace-livreur/chiffre-affaires", BarChart3], ["Profil", "/espace-livreur/profil", UserRound]];
 
 export default function MobileRoleNav() {
   const pathname = usePathname();
