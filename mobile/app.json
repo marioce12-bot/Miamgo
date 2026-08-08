@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "miamgo",
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "Miamgo utilise la caméra pour scanner les QR codes des commandes." }],
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#ef6a38" }]
+    ],
+    "permissions": ["CAMERA", "POST_NOTIFICATIONS"],
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true

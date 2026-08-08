@@ -28,3 +28,7 @@ npx eas build:configure
 npx eas build --platform android
 npx eas build --platform ios
 ```
+
+Le profil `preview` produit un APK Android installable. Le profil `production` produit un AAB Android pour Google Play et un IPA iOS. EAS demande une connexion Expo; la compilation iOS demande aussi un compte Apple Developer et ses identifiants de signature.
+
+Les permissions caméra et notifications sont demandées au premier lancement. Les permissions natives sont déclarées dans `app.json`.
