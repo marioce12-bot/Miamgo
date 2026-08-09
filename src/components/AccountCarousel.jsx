@@ -16,7 +16,7 @@ export default function AccountCarousel() {
   const displaySlides = [...slides, slides[0]];
 
   useEffect(() => {
-    const timer = setInterval(() => setIndex((current) => current + 1), 1700);
+    const timer = setInterval(() => setIndex((current) => current + 1), 2700);
     return () => clearInterval(timer);
   }, []);
 
