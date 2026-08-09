@@ -1,11 +1,22 @@
-.landing-page { position:relative; background-image:linear-gradient(100deg,rgba(13,42,32,.88) 5%,rgba(13,42,32,.45) 53%,rgba(16,31,23,.28)),url("https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=2000&q=90"); }
-.landing-fullscreen { min-height:680px; }
-.landing-fullscreen .landing-glass { width:calc(50% - 32px); margin:clamp(105px,16vh,160px) 0 0 max(24px,calc((100vw - 1180px)/2)); }
-.landing-page > .account-carousel { position:absolute; z-index:1; top:74px; right:max(24px,calc((100vw - 1180px)/2)); width:min(calc((100vw - 48px - 28px) / 2),576px); max-width:none; min-height:500px; margin:0; }
+.landing-page { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:clamp(20px,4vw,48px); padding:0 max(24px,calc((100vw - 1180px)/2)); background-image:linear-gradient(100deg,rgba(13,42,32,.88) 5%,rgba(13,42,32,.45) 53%,rgba(16,31,23,.28)),url("https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=2000&q=90"); }
+.landing-fullscreen { display:contents; }
+.landing-page .landing-header { grid-column:1 / -1; width:100%; max-width:none; }
+.landing-page .landing-glass { grid-column:1; align-self:center; width:auto; margin:clamp(64px,10vh,110px) 0 75px; }
+.landing-page > .account-carousel { position:static; grid-column:2; align-self:center; width:auto; max-width:none; min-height:500px; margin:clamp(64px,10vh,110px) 0 75px; }
 .landing-page > .account-carousel .carousel-track { height:500px; }
+.landing-page > .landing-experience-sections,.landing-page > .landing-footer { grid-column:1 / -1; width:100%; }
+@media (max-width:960px) and (min-width:721px) {
+  .landing-page { column-gap:24px; padding:0 24px; }
+  .landing-page .landing-glass h1 { font-size:clamp(38px,5vw,48px); }
+  .landing-page > .account-carousel .carousel-content { padding:32px; }
+  .landing-page > .account-carousel .carousel-content h2 { font-size:30px; }
+}
 @media (max-width:720px) {
-  .landing-fullscreen { min-height:690px; }
-  .landing-fullscreen .landing-glass { width:calc(100% - 32px); margin:100px 16px 0; }
-  .landing-page > .account-carousel { position:relative; top:auto; right:auto; width:calc(100% - 32px); min-height:420px; margin:20px 16px 45px; }
+  .landing-page { display:block; padding:0; }
+  .landing-fullscreen { display:block; min-height:690px; }
+  .landing-page .landing-header { width:auto; }
+  .landing-page .landing-glass { width:calc(100% - 32px); margin:100px 16px 0; }
+  .landing-page > .account-carousel { position:relative; width:calc(100% - 32px); min-height:420px; margin:20px 16px 45px; }
   .landing-page > .account-carousel .carousel-track { height:420px; }
+  .landing-page > .landing-experience-sections,.landing-page > .landing-footer { width:auto; }
 }
