@@ -27,7 +27,7 @@ export async function GET(request) {
     };
     const db = getAdminDb();
     const auth = getAdminAuth();
-    const [users, restaurants, orders, drivers, subscriptions, posts, payments] = await Promise.all([
+    const [users, restaurants, orders, drivers, subscriptions, posts, payments, driverSubscriptions] = await Promise.all([
       auth.listUsers(1000),
       db.collection("restaurants").get(),
       db.collection("orders").get(),
@@ -35,6 +35,7 @@ export async function GET(request) {
       db.collection("subscriptions").get(),
       db.collection("posts").get(),
       Promise.all([db.collection("paymentEvents").get(), db.collection("fedapayEvents").get()]),
+      db.collection("driverSubscriptions").get(),
     ]);
     const paymentDocs = [...payments[0].docs, ...payments[1].docs];
     const paidOrders = orders.docs.filter((item) => inPeriod(item) && ["paid", "completed", "delivered"].includes(item.data().paymentStatus || item.data().status));
@@ -61,7 +62,7 @@ export async function GET(request) {
     const restaurantRows = restaurants.docs.slice(0, 100).map((item) => ({ id: item.id, ...item.data(), subscriptionExpired: item.data().subscriptionExpiresAt?.toDate?.() ? item.data().subscriptionExpiresAt.toDate() <= new Date() : item.data().subscriptionStatus === "expired" }));
     const orderRows = orders.docs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() }));
     const subscriptionRows = subscriptions.docs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() }));
-    return NextResponse.json({ period, counts: { users: users.users.length, restaurants: restaurants.size, orders: orders.size, drivers: drivers.size, suspended: users.users.filter((user) => user.disabled).length, posts: posts.size }, finance: { subscriptionRevenue, orderFees, totalRevenue: subscriptionRevenue + orderFees, paidOrders: paidOrders.length, paidSubscriptions: paidSubscriptions.length, paymentEvents: paymentDocs.length, selectedYear, selectedDay, monthlyRevenue, hourlyRevenue, dayRevenue }, users: profiles, restaurants: restaurantRows, drivers: driverApplications, orders: orderRows, subscriptions: subscriptionRows, payments: paymentDocs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() })), posts: posts.docs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() })) }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ period, counts: { users: users.users.length, restaurants: restaurants.size, orders: orders.size, drivers: drivers.size, suspended: users.users.filter((user) => user.disabled).length, posts: posts.size }, finance: { subscriptionRevenue, orderFees, totalRevenue: subscriptionRevenue + orderFees, paidOrders: paidOrders.length, paidSubscriptions: paidSubscriptions.length, paymentEvents: paymentDocs.length, selectedYear, selectedDay, monthlyRevenue, hourlyRevenue, dayRevenue }, users: profiles, restaurants: restaurantRows, drivers: driverApplications, orders: orderRows, subscriptions: subscriptionRows, driverSubscriptions: driverSubscriptions.docs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() })), payments: paymentDocs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() })), posts: posts.docs.slice(0, 200).map((item) => ({ id: item.id, ...item.data() })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ error: error.message || "Firebase Admin non configuré.", code: "ADMIN_FIREBASE_ERROR" }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
