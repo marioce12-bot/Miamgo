@@ -10,7 +10,10 @@ export async function POST(request) {
   if (!authorization.startsWith("Bearer ")) return NextResponse.json({ error: "Token Firebase absent." }, { status: 401 });
   try {
     const decoded = await getAdminAuth().verifyIdToken(authorization.slice(7));
+    const account = await getAdminAuth().getUser(decoded.uid);
+    if (account.disabled) return NextResponse.json({ error: "Ce compte est suspendu. Contactez l’administration pour demander sa réactivation." }, { status: 403 });
     const profile = await getAdminDb().collection("users").doc(decoded.uid).get();
+    if (profile.data()?.suspended) return NextResponse.json({ error: "Ce compte est suspendu. Contactez l’administration pour demander sa réactivation." }, { status: 403 });
     const role = profile.data()?.role || "client";
     const token = await new SignJWT({ uid: decoded.uid, role }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("8h").sign(new TextEncoder().encode(process.env.MIAMGO_SESSION_SECRET));
     const response = NextResponse.json({ ok: true, role });

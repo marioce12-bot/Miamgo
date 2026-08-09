@@ -26,7 +26,7 @@ export default function MobileRoleNav() {
     setRole(profile?.role === "driver" ? "driver" : profile?.role === "restaurant_owner" || ownsRestaurant ? "restaurant_owner" : "client");
   }), []);
   const publicPaths = ["/", "/connexion", "/inscription-client", "/inscription-resto", "/inscription-livreur"];
-  if (!role || publicPaths.includes(pathname)) return null;
+  if (!role || publicPaths.includes(pathname) || pathname.startsWith("/admin")) return null;
   if (typeof document !== "undefined") document.cookie = `miamgo_role=${role}; path=/; max-age=86400; samesite=lax`;
   const items = role === "restaurant_owner" ? restaurantItems.map(([label, href, Icon]) => [label === "Fil" ? t("feed") : label === "Commandes" ? t("orders") : label === "Menu" ? t("menu") : label === "Livraison" ? t("delivery") : t("more"), href, Icon]) : role === "driver" ? driverItems : customerItems.map(([label, href, Icon]) => [label === "Accueil" ? t("home") : label === "Explorer" ? t("explore") : label === "Panier" ? t("cart") : label === "Commandes" ? t("orders") : t("profile"), href, Icon]);
   const isActive = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);

@@ -3,6 +3,7 @@ import "./interactive.css";
 import "./modals.css";
 import "./marketing.css";
 import "./theme.css";
+import "./admin.css";
 import MobileRoleNav from "../components/MobileRoleNav";
 import { PreferencesProvider } from "../components/PreferencesProvider";
 
