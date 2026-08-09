@@ -12,7 +12,7 @@ import MiamgoQr from "../../components/MiamgoQr";
 import { auth } from "../../lib/firebase";
 import { createOrder, ensureCustomerProfile } from "../../lib/firestore";
 
-const fallbackItems = [{ id: "riz", name: "Riz gras au poulet fumé", price: 2500, quantity: 1 }];
+const fallbackItems = [];
 
 export default function CheckoutPage() {
   const router = useRouter();
