@@ -14,8 +14,11 @@ export async function POST(request) {
   if (!restaurant.exists || restaurant.data().ownerId !== decoded.uid) return NextResponse.json({ error: "Restaurant non autorisé." }, { status: 403 });
   if (restaurant.data().subscriptionStatus === "active" && restaurant.data().plan === plan && restaurant.data().subscriptionExpiresAt?.toDate?.() > new Date()) return NextResponse.json({ error: "Cet abonnement est déjà actif." }, { status: 409 });
   const baseUrl = process.env.FEDAPAY_ENVIRONMENT === "sandbox" ? "https://sandbox-api.fedapay.com/v1" : "https://api.fedapay.com/v1";
-  const response = await fetch(`${baseUrl}/transactions`, { method: "POST", headers: { Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ description: `Abonnement Miamgo ${plan}`, amount: prices[plan], currency: { iso: "XOF" }, custom_metadata: { type: "subscription", restaurantId, ownerId: decoded.uid, plan } }) });
-  const payload = await response.json(); if (!response.ok) return NextResponse.json({ error: payload?.message || "FedaPay a refusé l'abonnement." }, { status: 502 });
-  await restaurantRef.set({ plan, subscriptionStatus: "payment_pending", subscriptionTransactionId: String(payload.id || payload.data?.id), updatedAt: new Date() }, { merge: true });
+   const transactionAmount = prices[plan];
+   const response = await fetch(`${baseUrl}/transactions`, { method: "POST", headers: { Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ description: `Abonnement Miamgo ${plan}`, amount: transactionAmount, currency: { iso: "XOF" }, callback_url: `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/api/fedapay/webhook`, custom_metadata: { type: "subscription", restaurantId: String(restaurantId), ownerId: decoded.uid, plan, amount: transactionAmount } }) });
+   const payload = await response.json().catch(() => ({})); if (!response.ok) return NextResponse.json({ error: payload?.message || payload?.error || "FedaPay a refusé l'abonnement.", details: payload?.errors || payload?.data || null }, { status: 502 });
+   const transactionId = payload.id || payload.data?.id;
+   if (!transactionId) return NextResponse.json({ error: "FedaPay n’a pas retourné d’identifiant de transaction.", details: payload }, { status: 502 });
+   await restaurantRef.set({ plan, subscriptionStatus: "payment_pending", subscriptionTransactionId: String(transactionId), updatedAt: new Date() }, { merge: true });
   return NextResponse.json({ transaction: payload, amount: prices[plan] });
 }

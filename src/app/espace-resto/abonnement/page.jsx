@@ -6,6 +6,7 @@ import { Check, Crown, X } from "lucide-react";
 import PlatformShell from "../../../components/PlatformShell";
 import FedaPayCheckout from "../../../components/FedaPayCheckout";
 import { auth } from "../../../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { getOwnedRestaurant } from "../../../lib/firestore";
 
 const plans = [
@@ -25,19 +26,24 @@ export default function SubscriptionPage() {
   const paymentRef = useRef(null);
 
   useEffect(() => {
-    let stop;
-    if (auth.currentUser) getOwnedRestaurant(auth.currentUser.uid).then((owned) => {
+    let authStop;
+    let restaurantStop;
+    authStop = onAuthStateChanged(auth, (user) => {
+      if (!user) { setRestaurant(null); return; }
+      getOwnedRestaurant(user.uid).then((owned) => {
       setRestaurant(owned);
       if (owned?.plan) setSelected(owned.plan);
       if (owned?.id) import("firebase/firestore").then(({ doc, getFirestore, onSnapshot }) => {
-        stop = onSnapshot(doc(getFirestore(), "restaurants", owned.id), (snapshot) => {
+        restaurantStop?.();
+        restaurantStop = onSnapshot(doc(getFirestore(), "restaurants", owned.id), (snapshot) => {
           const next = { id: snapshot.id, ...snapshot.data() };
           setRestaurant(next);
           if (next.plan) setSelected(next.plan);
         });
       });
-    }).catch(() => {});
-    return () => stop?.();
+      }).catch(() => setStatus("Impossible de charger votre restaurant. Reconnectez-vous puis réessayez."));
+    });
+    return () => { authStop?.(); restaurantStop?.(); };
   }, []);
 
   function selectPlan(name) {
@@ -49,12 +55,15 @@ export default function SubscriptionPage() {
   async function pay(planName) {
     setConfirmPlan(null);
     if (!auth.currentUser || !restaurant) { setStatus("Connectez-vous avec le compte propriétaire du restaurant."); return; }
+    setSelected(planName);
     try {
       const token = await auth.currentUser.getIdToken();
       const response = await fetch("/api/fedapay/create-subscription", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId: restaurant.id, plan: planName }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error);
-      setTransactionId(String(payload.transaction?.id || payload.transaction?.data?.id));
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || payload.details || `FedaPay a refusé la transaction (${response.status}).`);
+      const nextTransactionId = payload.transaction?.id || payload.transaction?.data?.id;
+      if (!nextTransactionId) throw new Error("FedaPay n’a pas retourné d’identifiant de transaction.");
+      setTransactionId(String(nextTransactionId));
       setTimeout(() => paymentRef.current?.open().catch((error) => setStatus(error.message)), 50);
     } catch (error) { setStatus(error.message || "Impossible de lancer le paiement."); }
   }
