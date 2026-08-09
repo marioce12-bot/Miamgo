@@ -17,6 +17,8 @@ export default function MobileRoleNav() {
   const pathname = usePathname();
   const { t } = usePreferences() || { t: (key) => key };
   const [role, setRole] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  useEffect(() => { const sync = () => setCartCount(Number(localStorage.getItem("miamgo-cart-count") || 0)); sync(); window.addEventListener("miamgo-cart-updated", sync); return () => window.removeEventListener("miamgo-cart-updated", sync); }, []);
   useEffect(() => onAuthStateChanged(auth, async (user) => {
     if (!user) { setRole("client"); return; }
     const profile = await getUserProfile(user.uid).catch(() => null);
@@ -28,5 +30,5 @@ export default function MobileRoleNav() {
   if (typeof document !== "undefined") document.cookie = `miamgo_role=${role}; path=/; max-age=86400; samesite=lax`;
   const items = role === "restaurant_owner" ? restaurantItems.map(([label, href, Icon]) => [label === "Fil" ? t("feed") : label === "Commandes" ? t("orders") : label === "Menu" ? t("menu") : label === "Livraison" ? t("delivery") : t("more"), href, Icon]) : role === "driver" ? driverItems : customerItems.map(([label, href, Icon]) => [label === "Accueil" ? t("home") : label === "Explorer" ? t("explore") : label === "Panier" ? t("cart") : label === "Commandes" ? t("orders") : t("profile"), href, Icon]);
   const isActive = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
-  return <nav className={`portal-mobile-nav ${role === "restaurant_owner" ? "restaurant-mobile-nav" : role === "driver" ? "driver-mobile-nav" : ""}`}>{items.map(([label, href, Icon]) => <Link className={isActive(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Commandes" && role === "restaurant_owner" && <i>3</i>}<span>{label}</span></Link>)}</nav>;
+  return <nav className={`portal-mobile-nav ${role === "restaurant_owner" ? "restaurant-mobile-nav" : role === "driver" ? "driver-mobile-nav" : ""}`}>{items.map(([label, href, Icon]) => <Link className={isActive(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Panier" && cartCount > 0 && <i>{cartCount}</i>}{label === "Commandes" && role === "restaurant_owner" && <i>3</i>}<span>{label}</span></Link>)}</nav>;
 }
