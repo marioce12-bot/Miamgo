@@ -110,20 +110,33 @@ service cloud.firestore {
     }
 
     match /driverApplications/{userId} {
-      allow create: if isSelf(userId) && request.resource.data.userId == userId;
+      allow create: if isSelf(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.keys().hasOnly([
+          'userId', 'firstName', 'lastName', 'phone', 'city', 'country',
+          'gender', 'identityDocumentUrl', 'restaurantInvitation',
+          'status', 'createdAt', 'updatedAt'
+        ]);
       allow read: if isSelf(userId) || isPlatformAdmin();
-      allow update: if isPlatformAdmin();
+      allow update: if isPlatformAdmin()
+        || (isSelf(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'firstName', 'lastName', 'phone', 'city', 'country', 'gender',
+            'identityDocumentUrl', 'restaurantInvitation', 'updatedAt'
+          ]));
     }
 
     match /driverLocations/{driverId} {
-      allow create: if isSelf(driverId)
-        && request.resource.data.verificationStatus == 'pending'
-        && request.resource.data.subscriptionStatus in ['locked', 'pending_payment'];
-      allow update: if isSelf(driverId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'city', 'country', 'availabilityStatus', 'updatedAt'])
-        && request.resource.data.verificationStatus == resource.data.verificationStatus
-        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
       allow read: if isSelf(driverId) || isPlatformAdmin();
+      allow create: if isSelf(driverId)
+        && request.resource.data.keys().hasOnly([
+          'latitude', 'longitude', 'accuracy', 'tracking', 'updatedAt'
+        ]);
+      allow update: if isSelf(driverId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'latitude', 'longitude', 'accuracy', 'tracking', 'updatedAt'
+        ]);
     }
 
     match /driverRestaurants/{affiliationId} {
@@ -143,10 +156,20 @@ service cloud.firestore {
     }
 
     match /driverDirectory/{driverId} {
-      allow read: if signedIn()
-        && resource.data.verificationStatus == 'approved'
-        && resource.data.subscriptionStatus == 'active';
-      allow create, update: if isSelf(driverId);
+      allow read: if isPlatformAdmin()
+        || (signedIn()
+          && resource.data.verificationStatus == 'approved'
+          && resource.data.subscriptionStatus == 'active');
+      allow create: if isSelf(driverId)
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.subscriptionStatus in ['locked', 'pending_payment'];
+      allow update: if isSelf(driverId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'city', 'country',
+          'availabilityStatus', 'updatedAt'
+        ])
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
     }
   }
 }

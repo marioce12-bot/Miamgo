@@ -1,4 +1,5 @@
 import { firebaseApp } from "./firebase";
+import { normalizePhone } from "./phone";
 
 async function firestore() {
   const api = await import("firebase/firestore");
@@ -34,8 +35,17 @@ export async function getOwnedRestaurant(userId) {
 }
 
 export async function registerProfile(user, profile) {
-  const { db, doc, serverTimestamp, setDoc } = await firestore();
-  await setDoc(doc(db, "users", user.uid), {
+  const { db, doc, runTransaction, serverTimestamp } = await firestore();
+  const profileRef = doc(db, "users", user.uid);
+  const phone = normalizePhone(profile.phone);
+  const phoneRef = phone ? doc(db, "phoneIndex", phone) : null;
+  await runTransaction(db, async (transaction) => {
+    if (phoneRef) {
+      const existing = await transaction.get(phoneRef);
+      if (existing.exists && existing.data().userId !== user.uid) throw new Error("phone-already-used");
+      transaction.set(phoneRef, { userId: user.uid, role: profile.role, phone, updatedAt: serverTimestamp() }, { merge: true });
+    }
+    transaction.set(profileRef, {
     displayName: profile.displayName,
     email: user.email || null,
     phone: profile.phone || null,
@@ -44,6 +54,7 @@ export async function registerProfile(user, profile) {
     role: profile.role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    });
   });
 }
 
