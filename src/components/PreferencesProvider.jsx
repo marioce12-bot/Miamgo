@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { updateProfileSettings } from "../lib/firestore";
+import LocaleDomTranslator from "./LocaleDomTranslator";
 
 const translations = {
   fr: { settings: "Paramètres", save: "Enregistrer", logout: "Déconnexion", home: "Accueil", explore: "Explorer", cart: "Panier", orders: "Commandes", profile: "Profil", available: "Disponible", unavailable: "Indisponible", language: "Langue", theme: "Thème", light: "Clair", dark: "Sombre", reply: "Répondre", send: "Envoyer", feed: "Fil Miamgo", nearby: "Autour de vous", craving: "Qu'est-ce qui vous fait envie?", filter: "Filtrer", search: "Rechercher un plat, un restaurant...", restaurant: "Restaurant", menu: "Menu", delivery: "Livraison", more: "Plus", dashboard: "Tableau de bord", history: "Historique", revenue: "Chiffre d'affaires", scan: "Scanner", signIn: "Se connecter", signUp: "S'inscrire", client: "Je suis client", restaurantAccount: "Je suis restaurant", driver: "Je suis livreur", noData: "Aucune donnée disponible" },
@@ -18,6 +19,6 @@ export function PreferencesProvider({ children }) {
   async function changeLanguage(value) { setLanguage(value); if (userId) await updateProfileSettings(userId, { language: value }).catch(() => {}); }
   async function changeTheme(value) { setTheme(value); if (userId) await updateProfileSettings(userId, { theme: value }).catch(() => {}); }
   const value = useMemo(() => ({ language, theme, setLanguage: changeLanguage, setTheme: changeTheme, t: (key) => translations[language][key] || key }), [language, theme, userId]);
-  return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
+  return <PreferencesContext.Provider value={value}>{children}<LocaleDomTranslator /></PreferencesContext.Provider>;
 }
 export function usePreferences() { return useContext(PreferencesContext); }
