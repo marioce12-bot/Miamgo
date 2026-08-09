@@ -108,5 +108,28 @@ service cloud.firestore {
       allow create, update: if isSelf(driverId);
       allow read: if isSelf(driverId) || isPlatformAdmin();
     }
+
+    match /driverRestaurants/{affiliationId} {
+      allow create: if signedIn() && request.resource.data.driverId == request.auth.uid;
+      allow read: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+      allow update: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+      allow delete: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+    }
+
+    match /driverDirectory/{driverId} {
+      allow read: if signedIn()
+        && resource.data.verificationStatus == 'approved'
+        && resource.data.subscriptionStatus == 'active';
+      allow create, update: if isSelf(driverId);
+    }
   }
 }

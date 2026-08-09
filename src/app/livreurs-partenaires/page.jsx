@@ -1,8 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Bike, MapPin, MessageCircle, Star } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
 import PlatformShell from "../../components/PlatformShell";
+import { auth } from "../../lib/firebase";
+import { getDriverGroupsForRestaurant, getOwnedRestaurant } from "../../lib/firestore";
 
-const drivers = [["Koffi Mensah", "KM", "4.9", "1,2 km", "12", "#d96b3a"], ["Sonia Agossou", "SA", "5.0", "2,1 km", "9", "#586dbe"], ["Moussa Traoré", "MT", "4.8", "2,8 km", "21", "#2d6955"]];
-export default function PartnerDrivers() { return <PlatformShell><main className="content-wrap partner-drivers"><Link className="back-link" href="/livreurs"><ArrowLeft size={17} />Retour à mes livreurs</Link><p className="eyebrow">RÉSEAU MIAMGO</p><h1>Livreurs partenaires disponibles</h1><p>Choisissez un livreur pour une course ponctuelle.</p><div className="partner-driver-grid">{drivers.map(([name, initials, rating, distance, trips, color]) => <article key={name}><span style={{ background: color }}>{initials}</span><div><h2>{name}</h2><p><Star size={13} fill="currentColor" />{rating} · {trips} courses · <MapPin size={13} />{distance}</p><small>Disponible maintenant</small></div><button onClick={() => alert(`Demande de course envoyée à ${name}.`)}><Bike size={16} />Envoyer une course</button><a href="https://wa.me/22900000000" target="_blank"><MessageCircle size={16} />WhatsApp</a></article>)}</div></main></PlatformShell> }
+export default function PartnerDrivers() {
+  const [groups, setGroups] = useState({ affiliated: [], platform: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (user) => {
+      if (!user) { setLoading(false); return; }
+      const restaurant = await getOwnedRestaurant(user.uid).catch(() => null);
+      if (!restaurant) { setLoading(false); return; }
+      try {
+        setGroups(await getDriverGroupsForRestaurant(restaurant.id));
+      } finally { setLoading(false); }
+    });
+  }, []);
+
+  return <PlatformShell><main className="content-wrap partner-drivers"><Link className="back-link" href="/espace-resto/livraison"><ArrowLeft size={17} />Retour à la livraison</Link><p className="eyebrow">LIVREURS DISPONIBLES</p><h1>Choisir un livreur</h1>{loading ? <div className="admin-table-placeholder">Chargement des livreurs...</div> : <><h2 className="driver-group-title">Mes livreurs affiliés ({groups.affiliated.length})</h2><DriverList drivers={groups.affiliated} /><h2 className="driver-group-title">Autres livreurs actifs de la plateforme ({groups.platform.length})</h2><DriverList drivers={groups.platform} /></>}</main></PlatformShell>;
+}
+
+function DriverList({ drivers }) {
+  if (!drivers.length) return <div className="admin-table-placeholder"><p>Aucun livreur disponible dans ce groupe.</p></div>;
+  return <div className="partner-driver-grid">{drivers.map((driver) => <article key={driver.id}><span className="driver-avatar">{driver.displayName?.slice(0, 2).toUpperCase() || "LI"}</span><div><h2>{driver.displayName}</h2><p><Star size={13} fill="currentColor" />Disponible · <MapPin size={13} />{driver.city || "Zone inconnue"}</p></div><button onClick={() => alert(`Demande envoyée à ${driver.displayName}.`)}><Bike size={16} />Envoyer</button><a href={`https://wa.me/${driver.phone || ""}`} target="_blank"><MessageCircle size={16} />WhatsApp</a></article>)}</div>;
+}
