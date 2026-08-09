@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
+import { usePreferences } from "./PreferencesProvider";
 
 const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
 const restaurantItems = [["Fil", "/accueil", Home], ["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Plus", "/espace-resto/plus", Menu]];
@@ -14,6 +15,7 @@ const driverItems = [["Accueil", "/espace-livreur", Home], ["En cours", "/espace
 
 export default function MobileRoleNav() {
   const pathname = usePathname();
+  const { t } = usePreferences() || { t: (key) => key };
   const [role, setRole] = useState(null);
   useEffect(() => onAuthStateChanged(auth, async (user) => {
     if (!user) { setRole("client"); return; }
@@ -23,7 +25,7 @@ export default function MobileRoleNav() {
   }), []);
   const publicPaths = ["/", "/connexion", "/inscription-client", "/inscription-resto", "/inscription-livreur"];
   if (!role || publicPaths.includes(pathname)) return null;
-  const items = role === "restaurant_owner" ? restaurantItems : role === "driver" ? driverItems : customerItems;
+  const items = role === "restaurant_owner" ? restaurantItems.map(([label, href, Icon]) => [label === "Fil" ? t("feed") : label === "Commandes" ? t("orders") : label === "Menu" ? t("menu") : label === "Livraison" ? t("delivery") : t("more"), href, Icon]) : role === "driver" ? driverItems : customerItems.map(([label, href, Icon]) => [label === "Accueil" ? t("home") : label === "Explorer" ? t("explore") : label === "Panier" ? t("cart") : label === "Commandes" ? t("orders") : t("profile"), href, Icon]);
   const isActive = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
   return <nav className={`portal-mobile-nav ${role === "restaurant_owner" ? "restaurant-mobile-nav" : role === "driver" ? "driver-mobile-nav" : ""}`}>{items.map(([label, href, Icon]) => <Link className={isActive(href) ? "active" : ""} href={href} key={label}><Icon size={21} />{label === "Commandes" && role === "restaurant_owner" && <i>3</i>}<span>{label}</span></Link>)}</nav>;
 }
