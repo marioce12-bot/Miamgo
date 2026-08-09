@@ -60,7 +60,7 @@ export default function SubscriptionPage() {
       const token = await auth.currentUser.getIdToken();
       const response = await fetch("/api/fedapay/create-subscription", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId: restaurant.id, plan: planName }) });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || payload.details || `FedaPay a refusé la transaction (${response.status}).`);
+      if (!response.ok) { const details = typeof payload.details === "string" ? payload.details : payload.details ? JSON.stringify(payload.details) : ""; throw new Error([payload.error, details].filter(Boolean).join(" ") || `FedaPay a refusé la transaction (${response.status}).`); }
       const nextTransactionId = payload.transaction?.id || payload.transaction?.data?.id;
       if (!nextTransactionId) throw new Error("FedaPay n’a pas retourné d’identifiant de transaction.");
       setTransactionId(String(nextTransactionId));
