@@ -139,6 +139,18 @@ service cloud.firestore {
         ]);
     }
 
+    match /phoneIndex/{phoneKey} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.phone == phoneKey;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.phone == phoneKey;
+      allow delete: if isPlatformAdmin();
+    }
+
     match /driverRestaurants/{affiliationId} {
       allow create: if signedIn() && request.resource.data.driverId == request.auth.uid;
       allow read: if signedIn()

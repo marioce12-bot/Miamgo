@@ -54,12 +54,12 @@ export async function registerProfile(user, profile) {
     role: profile.role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    itemCount: Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0) : 0,
     });
   });
 }
 
 export function explainFirestoreError(error) {
+  if (error?.message === "phone-already-used") return "Ce numéro de téléphone est déjà associé à un compte.";
   if (error?.code === "permission-denied") return "Firestore a refusé l'écriture. Publiez les règles Firestore actuelles, puis réessayez avec le même e-mail et mot de passe.";
   if (error?.code === "failed-precondition") return "Cloud Firestore n'est pas activé dans le projet miamgo-2479d. Activez Firestore Database dans Firebase Console.";
   if (error?.code === "unavailable") return "Firestore est indisponible ou la connexion Internet est interrompue.";
@@ -169,6 +169,7 @@ export async function createOrder(customerId, order) {
     serialNumber,
     status: "pending",
     paymentStatus: "pending",
+    itemCount: Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0) : 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
