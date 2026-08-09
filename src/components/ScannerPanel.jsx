@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Camera, CheckCircle2, ScanLine, X } from "lucide-react";
+import { auth } from "../lib/firebase";
 
 export default function ScannerPanel({ purpose }) {
   const videoRef = useRef(null); const controlsRef = useRef(null);
@@ -22,6 +23,6 @@ export default function ScannerPanel({ purpose }) {
     } catch (cameraError) { setError(cameraError?.name === "NotAllowedError" ? "Autorisez la caméra dans les réglages du navigateur." : "Impossible d'ouvrir la caméra. Vérifiez HTTPS et les autorisations."); }
   }
   function stopCamera() { controlsRef.current?.stop(); setCamera(false); }
-  function validate(event) { event.preventDefault(); setResult(code.trim() ? `Commande ${code} validée pour ${purpose}.` : "Saisissez ou scannez un code de commande."); }
+  async function validate(event) { event.preventDefault(); const match = code.trim().match(/^miamgo:(pickup|delivery):(.+)$/); if (!match || !auth.currentUser) { setResult("QR invalide. Scannez le QR Miamgo d'une commande payée."); return; } try { const token = await auth.currentUser.getIdToken(); const response = await fetch(`/api/orders/${encodeURIComponent(match[2])}/validate-qr`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ qr: code }) }); const payload = await response.json(); if (!response.ok) throw new Error(payload.error); setResult(payload.message); } catch (error) { setResult(error.message || "Validation refusée."); } }
   return <section className="scanner-panel"><p className="eyebrow">SCAN SÉCURISÉ</p><h1>{purpose}</h1><p>Scannez le QR du client ou saisissez le numéro de commande.</p><div className="camera-frame">{camera ? <video ref={videoRef} autoPlay muted playsInline /> : <><ScanLine size={48} /><span>Positionnez le QR dans le cadre</span></>}</div>{camera ? <button className="camera-button" onClick={stopCamera}><X size={18} />Fermer la caméra</button> : <button className="camera-button" onClick={startCamera}><Camera size={18} />Ouvrir la caméra</button>}{error && <p className="scan-error">{error}</p>}<form onSubmit={validate}><label>Numéro ou code de commande<input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Ex. MG-0842" /></label><button>Valider la commande</button></form>{result && <p className="scan-result"><CheckCircle2 size={17} />{result}</p>}</section>;
 }
