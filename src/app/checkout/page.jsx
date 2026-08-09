@@ -13,6 +13,7 @@ import { createOrder, ensureCustomerProfile } from "../../lib/firestore";
 const FOOD_SUBTOTAL = 3000;
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const [delivery, setDelivery] = useState("delivery"); const [user, setUser] = useState(null); const [status, setStatus] = useState(""); const [statusKind, setStatusKind] = useState(""); const [coordinates, setCoordinates] = useState(null); const [quote, setQuote] = useState(null); const [locating, setLocating] = useState(false); const [transactionId, setTransactionId] = useState(null); const [orderId, setOrderId] = useState(null); const [orderSerial, setOrderSerial] = useState(null); const [paymentLoading, setPaymentLoading] = useState(false); const [fedapayReady, setFedapayReady] = useState(false); const paymentRef = useRef(null);
   useEffect(() => onAuthStateChanged(auth, (session) => { setUser(session); if (session) ensureCustomerProfile(session).catch(console.error); }), []);
   useEffect(() => { if (!orderId) return undefined; let unsubscribe; import("firebase/firestore").then(({ doc, getFirestore, onSnapshot }) => { unsubscribe = onSnapshot(doc(getFirestore(), "orders", orderId), (snapshot) => { const order = snapshot.data(); if (order?.paymentStatus === "paid") { setPaymentLoading(false); setStatusKind("success"); setStatus(`Commande confirmée ! Numéro ${order.serialNumber || orderSerial || orderId}.`); } }); }).catch(() => {}); return () => unsubscribe?.(); }, [orderId, orderSerial]);
