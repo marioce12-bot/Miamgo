@@ -125,7 +125,7 @@ export default function MiamgoFeed() {
   }, [user, pendingAction]);
 
   function requireAuth(action) {
-    if (user) {
+    if (auth.currentUser) {
       action();
       return;
     }
@@ -144,7 +144,8 @@ export default function MiamgoFeed() {
       if (authMode === "login") {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        await ensureCustomerProfile(credential.user);
       }
       setShowLogin(false);
     } catch (error) {
@@ -155,21 +156,27 @@ export default function MiamgoFeed() {
   }
 
   function toggleLike(id) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
     const isLiked = !liked.includes(id);
     setLiked((current) => isLiked ? [...current, id] : current.filter((item) => item !== id));
-    setPostLike(user.uid, id, isLiked).catch(console.error);
+    setPostLike(currentUser.uid, id, isLiked).catch(console.error);
   }
 
   function toggleSave(id) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
     const isSaved = !saved.includes(id);
     const post = posts.find((item) => item.id === id);
     setSaved((current) => isSaved ? [...current, id] : current.filter((item) => item !== id));
-    saveFavorite(user.uid, post.restaurant.toLowerCase().replaceAll(" ", "-"), isSaved).catch(console.error);
+    saveFavorite(currentUser.uid, post.restaurant.toLowerCase().replaceAll(" ", "-"), isSaved).catch(console.error);
   }
 
   function addToCart(post) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
     setCart((current) => { const next = [...current, post]; localStorage.setItem("miamgo-cart-count", String(next.length)); window.dispatchEvent(new Event("miamgo-cart-updated")); return next; });
-    addCartItem(user.uid, post).catch(console.error);
+    addCartItem(currentUser.uid, post).catch(console.error);
     setCartToast(`${post.dish} a été ajouté au panier.`);
     window.setTimeout(() => setCartToast(""), 2800);
   }
@@ -178,13 +185,15 @@ export default function MiamgoFeed() {
     event.preventDefault();
     const text = new FormData(event.currentTarget).get("comment")?.trim();
     if (!text) return;
-    const comment = { id: `${user.uid}-${Date.now()}`, text, userId: user.uid, author: user.email?.split("@")[0] || "Vous" };
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    const comment = { id: `${currentUser.uid}-${Date.now()}`, text, userId: currentUser.uid, author: currentUser.email?.split("@")[0] || "Vous" };
     setComments((current) => ({ ...current, [postId]: [...(current[postId] || []), comment] }));
-    addComment(user.uid, postId, text).catch(console.error);
+    addComment(currentUser.uid, postId, text).catch(console.error);
     setCommenting(null);
   }
 
-  function submitReply(event, postId, commentId) { event.preventDefault(); const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(user.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
+  function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
