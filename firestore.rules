@@ -35,7 +35,9 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'pending';
-      allow update: if isRestaurantOwner(restaurantId) || isPlatformAdmin();
+      allow update: if isPlatformAdmin()
+        || (isRestaurantOwner(restaurantId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'category', 'phone', 'address', 'city', 'country', 'description', 'coverURL', 'photoURL', 'openingHours', 'deliveryMode', 'updatedAt']));
 
       match /menuItems/{itemId} {
         allow read: if get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.status == 'active' || isRestaurantOwner(restaurantId);
@@ -114,7 +116,13 @@ service cloud.firestore {
     }
 
     match /driverLocations/{driverId} {
-      allow create, update: if isSelf(driverId);
+      allow create: if isSelf(driverId)
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.subscriptionStatus in ['locked', 'pending_payment'];
+      allow update: if isSelf(driverId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'city', 'country', 'availabilityStatus', 'updatedAt'])
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
       allow read: if isSelf(driverId) || isPlatformAdmin();
     }
 

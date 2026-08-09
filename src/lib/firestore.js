@@ -131,10 +131,9 @@ export async function createRestaurant(ownerId, restaurant) {
   await setDoc(restaurantRef, {
     ...restaurant,
     ownerId,
-    status: "verification_pending",
+    status: "pending",
     verificationStatus: "pending",
     subscriptionStatus: "locked",
-    subscriptionStatus: "unpaid",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

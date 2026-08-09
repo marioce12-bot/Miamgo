@@ -1,11 +1,15 @@
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { getAdminAuth } from "../../../lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET, secure: true });
 
 export async function POST(request) {
+  const authorization = request.headers.get("authorization") || "";
+  if (!authorization.startsWith("Bearer ")) return NextResponse.json({ error: "Authentification requise pour téléverser un média." }, { status: 401 });
+  try { await getAdminAuth().verifyIdToken(authorization.slice(7)); } catch { return NextResponse.json({ error: "Session invalide." }, { status: 401 }); }
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return NextResponse.json({ error: "Le service de stockage média n'est pas configuré." }, { status: 500 });
   const input = await request.formData(); const file = input.get("file");
   if (!file || typeof file === "string") return NextResponse.json({ error: "Fichier média invalide." }, { status: 400 });

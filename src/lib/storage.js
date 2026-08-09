@@ -17,10 +17,12 @@ export async function uploadMediaFile(file) {
   const optimized = file.type.startsWith("video/") ? file : await compressImage(file);
   const data = new FormData();
   data.append("file", optimized);
-  const response = await fetch("/api/upload-media", { method: "POST", body: data });
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  const response = await fetch("/api/upload-media", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: data });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "upload-failed");
   return result;
 }
 
 export async function uploadImageFile(file, options = {}) { const result = await uploadMediaFile(file, options); return result.url; }
+import { auth } from "./firebase";
