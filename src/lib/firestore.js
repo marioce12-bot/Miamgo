@@ -54,6 +54,7 @@ export async function registerProfile(user, profile) {
     role: profile.role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    itemCount: Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0) : 0,
     });
   });
 }
