@@ -109,7 +109,8 @@ export default function MiamgoFeed() {
     if (session) {
       const profile = await getUserProfile(session.uid).catch(() => null);
       if (profile?.role) setRole(profile.role);
-      else ensureCustomerProfile(session).catch(console.error);
+      // Un profil absent ne doit jamais être transformé automatiquement en client:
+      // cela convertissait les inscriptions livreur/restaurateur incomplètes en comptes clients.
     } else {
       setRole("client");
     }

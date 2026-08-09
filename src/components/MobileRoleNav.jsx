@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
+import { getDriverApplication, getOwnedRestaurant, getUserProfile } from "../lib/firestore";
 import { usePreferences } from "./PreferencesProvider";
 
 const customerItems = [["Accueil", "/accueil", Home], ["Explorer", "/explorer", Compass], ["Panier", "/panier", ShoppingBag], ["Commandes", "/commandes", ClipboardList], ["Profil", "/profil", UserRound]];
@@ -22,8 +22,9 @@ export default function MobileRoleNav() {
   useEffect(() => onAuthStateChanged(auth, async (user) => {
     if (!user) { setRole("client"); return; }
     const profile = await getUserProfile(user.uid).catch(() => null);
-    const ownsRestaurant = profile?.role !== "restaurant_owner" && await getOwnedRestaurant(user.uid).catch(() => null);
-    setRole(profile?.role === "driver" ? "driver" : profile?.role === "restaurant_owner" || ownsRestaurant ? "restaurant_owner" : "client");
+    const driverApplication = profile?.role === "client" ? await getDriverApplication(user.uid).catch(() => null) : null;
+    const ownsRestaurant = profile?.role !== "restaurant_owner" && !driverApplication && await getOwnedRestaurant(user.uid).catch(() => null);
+    setRole(profile?.role === "driver" || driverApplication ? "driver" : profile?.role === "restaurant_owner" || ownsRestaurant ? "restaurant_owner" : "client");
   }), []);
   const publicPaths = ["/", "/connexion", "/inscription-client", "/inscription-resto", "/inscription-livreur"];
   if (!role || publicPaths.includes(pathname) || pathname.startsWith("/admin")) return null;

@@ -58,6 +58,12 @@ export async function registerProfile(user, profile) {
   });
 }
 
+export async function getDriverApplication(userId) {
+  const { db, doc, getDoc } = await firestore();
+  const snapshot = await getDoc(doc(db, "driverApplications", userId));
+  return snapshot.exists() ? snapshot.data() : null;
+}
+
 export function explainFirestoreError(error) {
   if (error?.message === "phone-already-used") return "Ce numéro de téléphone est déjà associé à un compte.";
   if (error?.code === "permission-denied") return "Firestore a refusé l'écriture. Publiez les règles Firestore actuelles, puis réessayez avec le même e-mail et mot de passe.";

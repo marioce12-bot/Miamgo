@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { getOwnedRestaurant, getUserProfile } from "../lib/firestore";
+import { getDriverApplication, getOwnedRestaurant, getUserProfile } from "../lib/firestore";
 
 export default function PlatformShell({ children, active = "", publicPage = false }) {
   const pathname = usePathname();
@@ -21,7 +21,9 @@ export default function PlatformShell({ children, active = "", publicPage = fals
     if (profile?.city) setLocation({ city: profile.city, country: profile.country || "BJ" });
     if (profile?.role === "restaurant_owner") setProfileLink("/espace-resto");
     if (profile?.role === "driver") setProfileLink("/espace-livreur");
-    if (profile?.role) setRole(profile.role);
+    const driverApplication = profile?.role === "client" ? await getDriverApplication(user.uid).catch(() => null) : null;
+    if (driverApplication) { setProfileLink("/espace-livreur"); setRole("driver"); }
+    else if (profile?.role) setRole(profile.role);
     if (profile?.role !== "restaurant_owner" && await getOwnedRestaurant(user.uid).catch(() => null)) { setProfileLink("/espace-resto"); setRole("restaurant_owner"); }
     setRoleReady(true);
   }), []);
