@@ -120,6 +120,11 @@ export async function addComment(userId, postId, content) {
   await setDoc(commentRef, { userId, content, createdAt: serverTimestamp() });
 }
 
+export async function addRestaurantReply(userId, postId, commentId, content) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "posts", String(postId), "comments", String(commentId), "replies", `${userId}_${Date.now()}`), { userId, content, createdAt: serverTimestamp() });
+}
+
 export async function createRestaurant(ownerId, restaurant) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   const restaurantRef = doc(db, "restaurants", restaurant.slug);

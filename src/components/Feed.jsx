@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, ensureCustomerProfile, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, ensureCustomerProfile, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 
 const posts = [
@@ -42,7 +42,7 @@ const posts = [
     price: "2 500 FCFA",
     likes: 126,
     comments: 14,
-    promoted: true,
+    promoted: true, restaurantId: "chez-aicha",
   },
   {
     id: 2,
@@ -57,7 +57,7 @@ const posts = [
     dish: "Spaghetti bolognaise",
     price: "1 800 FCFA",
     likes: 74,
-    comments: 9,
+    comments: 9, restaurantId: "comptoir-koffi",
   },
   {
     id: 3,
@@ -72,7 +72,7 @@ const posts = [
     dish: "Poisson braisé & alloco",
     price: "3 000 FCFA",
     likes: 218,
-    comments: 31,
+    comments: 31, restaurantId: "mami-grill",
   },
 ];
 
@@ -91,6 +91,7 @@ export default function MiamgoFeed() {
   const [saved, setSaved] = useState([]);
   const [cart, setCart] = useState([]);
   const [comments, setComments] = useState({});
+  const [replies, setReplies] = useState({});
   const [commenting, setCommenting] = useState(null);
   const [search, setSearch] = useState("");
   const [authMode, setAuthMode] = useState("login");
@@ -172,10 +173,13 @@ export default function MiamgoFeed() {
     event.preventDefault();
     const text = new FormData(event.currentTarget).get("comment")?.trim();
     if (!text) return;
-    setComments((current) => ({ ...current, [postId]: [...(current[postId] || []), text] }));
+    const comment = { id: `${user.uid}-${Date.now()}`, text, userId: user.uid, author: user.email?.split("@")[0] || "Vous" };
+    setComments((current) => ({ ...current, [postId]: [...(current[postId] || []), comment] }));
     addComment(user.uid, postId, text).catch(console.error);
     setCommenting(null);
   }
+
+  function submitReply(event, postId, commentId) { event.preventDefault(); const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(user.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
@@ -231,7 +235,7 @@ export default function MiamgoFeed() {
                 <button onClick={sharePost}><Share2 size={20} />Partager</button>
               </div>
               {commenting === post.id && <form className="comment-form" onSubmit={(event) => submitComment(event, post.id)}><input name="comment" autoFocus placeholder="Écrivez un commentaire..." /><button aria-label="Envoyer"><Send size={17} /></button></form>}
-              {postComments.map((comment, index) => <p className="comment" key={index}><b>Vous</b>{comment}</p>)}
+              {postComments.map((comment) => <div className="comment-thread" key={comment.id}><p className="comment"><b>{comment.author}</b>{comment.text}</p>{role === "restaurant_owner" && post.restaurantId === "chez-aicha" && <form className="reply-form" onSubmit={(event) => submitReply(event, post.id, comment.id)}><input name="reply" placeholder="Répondre au client..." /><button>Répondre</button></form>}{replies[comment.id] && <p className="restaurant-reply"><b>Réponse du restaurant</b>{replies[comment.id]}</p>}</div>)}
               <div className="order-row"><div><span>Plat du jour</span><strong>{post.price}</strong></div><button onClick={() => requireAuth(() => addToCart(post))}><Plus size={18} />Ajouter au panier</button><button className="order-now" onClick={() => requireAuth(() => { addToCart(post); router.push("/checkout"); })}>Commander</button></div>
             </article>;
           })}

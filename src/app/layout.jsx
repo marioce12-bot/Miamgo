@@ -4,6 +4,7 @@ import "./modals.css";
 import "./marketing.css";
 import "./theme.css";
 import MobileRoleNav from "../components/MobileRoleNav";
+import { PreferencesProvider } from "../components/PreferencesProvider";
 
 export const metadata = {
   title: "Miamgo | Le fil qui donne faim",
@@ -14,7 +15,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <head><link rel="preload" as="image" href="/miamgo-logo.png" fetchPriority="high" /></head>
-      <body>{children}<MobileRoleNav /></body>
+      <body><PreferencesProvider>{children}<MobileRoleNav /></PreferencesProvider></body>
     </html>
   );
 }

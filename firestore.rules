@@ -64,6 +64,13 @@ service cloud.firestore {
         allow read: if true;
         allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
         allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if signedIn()
+            && isRestaurantOwner(get(/databases/$(database)/documents/posts/$(postId)).data.restaurantId)
+            && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        }
       }
     }
 
