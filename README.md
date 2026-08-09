@@ -35,6 +35,8 @@ Pour publier exactement les regles du depot avec Firebase CLI: `npx firebase-too
 
 La console web séparée est disponible à `/admin`. Configurez `MIAMGO_ADMIN_PASSWORD` dans les variables Vercel. Le mot de passe ne doit jamais être écrit dans Git. Cette page n'est pas liée depuis l'application mobile.
 
+Les médias sont téléversés vers Cloudinary par `/api/upload-media`. Configurez `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` et `CLOUDINARY_API_SECRET` uniquement dans Vercel.
+
 Les routes protégées utilisent également `MIAMGO_SESSION_SECRET`, une valeur aléatoire longue utilisée pour signer la session rôle après vérification Firebase.
 
 ## Paiements

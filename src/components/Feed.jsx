@@ -225,7 +225,7 @@ export default function MiamgoFeed() {
               <div className="post-head"><button className="restaurant-avatar" style={{ backgroundColor: post.color }} onClick={() => router.push("/restaurant/chez-aicha")} aria-label={`Voir ${post.restaurant}`}>{post.avatar}</button><div><button className="restaurant-name" onClick={() => router.push("/restaurant/chez-aicha")}>{post.restaurant}</button><p>{post.handle} <span>·</span> {post.time}</p><small><MapPin size={12} />{post.location}</small></div><button className="more" onClick={sharePost}><Share2 size={18} /></button></div>
               <p className="post-copy">{post.text}</p>
               <div className={`food-image ${broken ? "image-fallback" : ""}`} style={broken ? { background: `linear-gradient(135deg, ${post.color}, #ffc66b)` } : undefined}>
-                {!broken && <img src={post.image} alt={post.dish} onError={() => setImageErrors((current) => [...current, post.id])} />}
+                {!broken && (post.mediaType === "video" ? <video src={post.mediaUrl} controls playsInline preload="metadata" /> : <img src={post.mediaUrl || post.image} alt={post.dish} onError={() => setImageErrors((current) => [...current, post.id])} />)}
                 {broken && <div><UtensilsCrossed size={42} /><strong>{post.dish}</strong><span>Une belle assiette vous attend</span></div>}
                 <span className="dish-label">{post.dish}<b>{post.price}</b></span>
               </div>

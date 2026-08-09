@@ -11,15 +11,16 @@ async function compressImage(file, maxWidth = 1600, quality = 0.8) {
   return blob ? new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.webp`, { type: "image/webp" }) : file;
 }
 
-export async function uploadImageFile(file, options = {}) {
+export async function uploadMediaFile(file) {
   if (!file) return null;
-  if (!file.type.startsWith("image/")) throw new Error("invalid-image");
-  if (file.size > 10 * 1024 * 1024) throw new Error("image-too-large");
-  const optimized = await compressImage(file, options.maxWidth || 1600, options.quality || 0.8);
+  if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) throw new Error("invalid-media");
+  const optimized = file.type.startsWith("video/") ? file : await compressImage(file);
   const data = new FormData();
-  data.append("image", optimized);
-  const response = await fetch("/api/upload-image", { method: "POST", body: data });
+  data.append("file", optimized);
+  const response = await fetch("/api/upload-media", { method: "POST", body: data });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "upload-failed");
-  return result.url;
+  return result;
 }
+
+export async function uploadImageFile(file, options = {}) { const result = await uploadMediaFile(file, options); return result.url; }
