@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 const config = {
   apiKey: "AIzaSyD02jnMgaMqnONlr3udR9oiYWuaVqbQtVs",
@@ -14,3 +15,4 @@ const config = {
 export const app = getApps().length ? getApp() : initializeApp(config);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const realtimeDb = getDatabase(app, "https://miamgo-2479d-default-rtdb.europe-west1.firebasedatabase.app");

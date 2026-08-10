@@ -25,10 +25,6 @@
         { "locationAlwaysAndWhenInUsePermission": "Miamgo utilise votre position pendant une livraison active." }
       ]
     ],
-    "permissions": [
-      "CAMERA",
-      "POST_NOTIFICATIONS"
-    ],
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
