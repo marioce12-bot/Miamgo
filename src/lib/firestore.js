@@ -40,21 +40,29 @@ export async function registerProfile(user, profile) {
   const phone = normalizePhone(profile.phone);
   const phoneRef = phone ? doc(db, "phoneIndex", phone) : null;
   await runTransaction(db, async (transaction) => {
+    const existingProfile = await transaction.get(profileRef);
+    const existingProfileData = existingProfile.exists() ? existingProfile.data() : null;
+    if (existingProfileData?.role && existingProfileData.role !== profile.role) {
+      throw new Error("role-already-used");
+    }
     if (phoneRef) {
       const existing = await transaction.get(phoneRef);
-      if (existing.exists && existing.data().userId !== user.uid) throw new Error("phone-already-used");
+      const existingPhoneData = existing.exists() ? existing.data() : null;
+      if (existingPhoneData?.userId && existingPhoneData.userId !== user.uid) throw new Error("phone-already-used");
       transaction.set(phoneRef, { userId: user.uid, role: profile.role, phone, updatedAt: serverTimestamp() }, { merge: true });
     }
-    transaction.set(profileRef, {
-    displayName: profile.displayName,
-    email: user.email || null,
-    phone: profile.phone || null,
-    country: profile.country || "BJ",
-    city: profile.city || "Cotonou",
-    role: profile.role,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    });
+    const values = {
+      displayName: profile.displayName,
+      phone: profile.phone || null,
+      country: profile.country || "BJ",
+      city: profile.city || "Cotonou",
+      updatedAt: serverTimestamp(),
+    };
+    if (existingProfileData) {
+      transaction.set(profileRef, values, { merge: true });
+    } else {
+      transaction.set(profileRef, { ...values, email: user.email || null, role: profile.role, createdAt: serverTimestamp() });
+    }
   });
 }
 
