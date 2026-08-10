@@ -93,9 +93,17 @@ service cloud.firestore {
       allow read: if signedIn()
         && (resource.data.customerId == request.auth.uid
           || isRestaurantOwner(resource.data.restaurantId)
+          || resource.data.assignedDriverId == request.auth.uid
           || isPlatformAdmin());
       allow update: if signedIn()
         && (isRestaurantOwner(resource.data.restaurantId) || isPlatformAdmin());
+      allow update: if signedIn()
+        && resource.data.assignedDriverId == request.auth.uid
+        && request.resource.data.assignedDriverId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'assignedDriverId', 'deliveryStatus', 'trackingActive', 'startedAt', 'updatedAt',
+          'status'
+        ]);
     }
 
     match /paymentEvents/{eventId} {

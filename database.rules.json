@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "deliveryAccess": {
+      "$orderId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid && data.val() == true",
+          ".write": false
+        }
+      }
+    },
+    "deliveryLocations": {
+      "$orderId": {
+        "$driverId": {
+          ".read": "auth != null && root.child('deliveryAccess').child($orderId).child(auth.uid).val() == true",
+          ".write": "auth != null && auth.uid == $driverId && root.child('deliveryAccess').child($orderId).child(auth.uid).val() == true && (!newData.exists() || (newData.child('tracking').val() == true && newData.hasChildren(['latitude', 'longitude', 'updatedAt'])))",
+          ".validate": "!newData.exists() || (newData.child('latitude').isNumber() && newData.child('longitude').isNumber() && newData.child('latitude').val() >= -90 && newData.child('latitude').val() <= 90 && newData.child('longitude').val() >= -180 && newData.child('longitude').val() <= 180)"
+        }
+      }
+    }
+  }
+}

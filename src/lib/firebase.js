@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD02jnMgaMqnONlr3udR9oiYWuaVqbQtVs",
@@ -12,3 +13,4 @@ const firebaseConfig = {
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
+export const realtimeDb = getDatabase(firebaseApp, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://miamgo-2479d-default-rtdb.firebaseio.com");

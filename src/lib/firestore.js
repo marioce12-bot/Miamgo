@@ -163,12 +163,33 @@ export async function createOrder(customerId, order) {
     customerId,
     serialNumber,
     status: "pending",
+    deliveryStatus: order.deliveryMode === "delivery" ? "en_attente_livraison" : "retrait",
+    assignedDriverId: null,
+    trackingActive: false,
     paymentStatus: "pending",
     itemCount: Array.isArray(order.items) ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0) : 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   return { id: orderRef.id, serialNumber };
+}
+
+export async function getActiveDriverOrder(driverId) {
+  const { collection, db, getDocs, limit, orderBy, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("assignedDriverId", "==", driverId), where("deliveryStatus", "in", ["assignee", "en_cours_livraison"]), orderBy("updatedAt", "desc"), limit(1)));
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
+
+export async function getActiveCustomerDelivery(customerId) {
+  const { collection, db, getDocs, limit, orderBy, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("customerId", "==", customerId), where("deliveryStatus", "==", "en_cours_livraison"), orderBy("updatedAt", "desc"), limit(1)));
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
+
+export async function getActiveRestaurantDeliveries(restaurantId) {
+  const { collection, db, getDocs, limit, orderBy, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("restaurantId", "==", restaurantId), where("deliveryStatus", "==", "en_cours_livraison"), orderBy("updatedAt", "desc"), limit(10)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 
 export async function createDriverApplication(userId, application) {
