@@ -13,4 +13,4 @@ const firebaseConfig = {
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
-export const realtimeDb = getDatabase(firebaseApp, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://miamgo-2479d-default-rtdb.firebaseio.com");
+export const realtimeDb = getDatabase(firebaseApp, process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://miamgo-2479d-default-rtdb.europe-west1.firebasedatabase.app");
