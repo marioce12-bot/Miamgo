@@ -166,7 +166,7 @@ export default function MiamgoFeed() {
         <a className="brand brand-with-logo" href="/accueil" aria-label="Miamgo accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></a>
         <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un plat, un resto..." /></label>
         <nav className="desktop-actions">
-          <button className="icon-button" onClick={() => router.push("/profil?tab=notifications")}><Bell size={20} /><span className="badge">3</span></button>
+          <button className="icon-button" onClick={() => router.push("/profil?tab=notifications")}><Bell size={20} /></button>
           {user ? <button className="profile-button" onClick={() => router.push("/profil")}><CircleUserRound size={22} /> {user.email?.split("@")[0] || "Mon profil"}</button> : <button className="login-button" onClick={() => setShowLogin(true)}>Se connecter</button>}
         </nav>
       </header>

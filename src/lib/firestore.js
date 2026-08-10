@@ -94,6 +94,11 @@ export async function createRestaurantPost(ownerId, restaurantId, post) {
   });
 }
 
+export async function getRestaurantBySlug(slug) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "restaurants"), where("slug", "==", slug), limit(1)));
+  return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+}
 export async function getRestaurantPosts(restaurantId) {
   const { collection, db, getDocs, limit, query, where } = await firestore();
   const snapshot = await getDocs(query(collection(db, "posts"), where("restaurantId", "==", restaurantId), limit(50)));
@@ -182,6 +187,10 @@ export async function getRestaurantMenu(restaurantId) {
 export async function addRestaurantMenuItem(restaurantId, item) {
   const { addDoc, collection, db, serverTimestamp } = await firestore();
   return addDoc(collection(db, "restaurants", restaurantId, "menuItems"), { ...item, available: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+export async function updateRestaurantSettings(restaurantId, changes) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "restaurants", restaurantId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
 }
 export async function updateRestaurantPlan(restaurantId, plan) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
