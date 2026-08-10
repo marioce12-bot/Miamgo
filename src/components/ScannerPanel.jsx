@@ -5,9 +5,15 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Camera, CheckCircle2, ScanLine, X } from "lucide-react";
 import { auth } from "../lib/firebase";
 
-export default function ScannerPanel({ purpose }) {
+export default function ScannerPanel({ purpose, autoStart = false }) {
   const videoRef = useRef(null); const controlsRef = useRef(null);
   const [camera, setCamera] = useState(false); const [code, setCode] = useState(""); const [result, setResult] = useState(""); const [error, setError] = useState("");
+  useEffect(() => {
+    const shouldAutoStart = autoStart || new URLSearchParams(window.location.search).get("autostart") === "1";
+    if (!shouldAutoStart) return undefined;
+    const frame = requestAnimationFrame(() => startCamera());
+    return () => cancelAnimationFrame(frame);
+  }, [autoStart]);
   useEffect(() => () => controlsRef.current?.stop(), []);
   async function startCamera() {
     if (!navigator.mediaDevices?.getUserMedia) { setError("La caméra nécessite HTTPS et un navigateur compatible."); return; }
