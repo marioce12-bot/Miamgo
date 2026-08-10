@@ -257,7 +257,7 @@ export async function createStory(ownerId, story) {
 
 export async function getActiveStories() {
   const { collection, db, getDocs, limit, orderBy, query, Timestamp, where } = await firestore();
-  const snapshot = await getDocs(query(collection(db, "stories"), where("status", "==", "active"), where("expiresAt", ">", Timestamp.now()), orderBy("expiresAt", "asc"), limit(50)));
+  const snapshot = await getDocs(query(collection(db, "stories"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(50)));
   return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 export async function createDriverApplication(userId, application) {

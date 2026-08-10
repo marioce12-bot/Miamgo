@@ -52,7 +52,7 @@ service cloud.firestore {
     }
 
     match /stories/{storyId} {
-      allow read: if resource.data.expiresAt > request.time && resource.data.status == 'active';
+      allow read: if resource.data.status == 'active';
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == 'active' && request.resource.data.expiresAt > request.time;
       allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
