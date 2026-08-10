@@ -56,3 +56,13 @@ a {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* Short guided restaurant signup */
+.signup-progress { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:700px; margin:0 auto 18px; }
+.signup-progress div { display:grid; justify-items:center; gap:5px; color:var(--muted); }
+.signup-progress span { display:grid; place-items:center; width:30px; height:30px; color:var(--muted); background:#eeeae0; border-radius:50%; font-size:11px; font-weight:800; }
+.signup-progress div.active { color:var(--green); }.signup-progress div.active span { color:#fff; background:var(--orange); }.signup-progress small { font-size:10px; font-weight:800; }
+.signup-next,.signup-step-actions button,.create-restaurant { display:flex; align-items:center; justify-content:center; gap:5px; padding:11px 14px; color:#fff; background:var(--green); border-radius:8px; font-size:12px; font-weight:800; }
+.signup-step-actions { display:flex; justify-content:space-between; gap:10px; margin-top:17px; }.signup-step-actions > button:first-child { color:var(--muted); background:transparent; border:1px solid var(--line); }.signup-step-actions .create-restaurant { background:var(--orange); }
+.onboarding-form section[hidden] { display:none; }
+.onboarding-form label small { color:var(--muted); font-size:10px; font-weight:500; }
+@media (max-width:720px) { .signup-progress small { font-size:9px; }.signup-step-actions { position:sticky; bottom:10px; padding-top:8px; background:rgba(255,253,248,.9); } }

@@ -1,18 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Mail, Store, Truck, UserRound } from "lucide-react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { Check, ChevronLeft, ChevronRight, Mail, Store, Truck, UserRound } from "lucide-react";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import PlatformShell from "../../components/PlatformShell";
 import { auth } from "../../lib/firebase";
 import { createRestaurant, explainFirestoreError, getOwnedRestaurant, getUserProfile, registerProfile } from "../../lib/firestore";
 
 const plans = [["basic", "Basique", "2 500 FCFA", ["Boutique en ligne", "Menu et plats du jour", "Commandes et retrait QR"]], ["pro", "Pro", "5 000 FCFA", ["Tout le plan Basique", "Promotions et statistiques", "Équipe et livreurs internes"]], ["premium", "Premium IA", "12 000 FCFA", ["Tout le plan Pro", "Agent IA restaurant", "Recommandations clients"]]];
+const steps = ["Votre compte", "Votre restaurant", "Votre formule"];
 
 export default function RestaurantOnboarding() {
-  const [plan, setPlan] = useState("pro"); const [delivery, setDelivery] = useState("internal"); const [status, setStatus] = useState(""); const [loading, setLoading] = useState(false); const router = useRouter();
-  async function submitRestaurant(event) { event.preventDefault(); const form = new FormData(event.currentTarget); setLoading(true); setStatus(""); let credential; let profileExists = false; try { credential = await createUserWithEmailAndPassword(auth, form.get("email"), form.get("password")); } catch (authError) { if (authError.code !== "auth/email-already-in-use") { setStatus("Impossible de créer le compte. Vérifiez les informations saisies."); setLoading(false); return; } try { const { signInWithEmailAndPassword } = await import("firebase/auth"); credential = await signInWithEmailAndPassword(auth, form.get("email"), form.get("password")); const existing = await getUserProfile(credential.user.uid); if (existing?.role !== "restaurant_owner") { setStatus("Ce compte existe déjà avec un autre type de profil. Connectez-vous depuis la page de connexion."); setLoading(false); return; } profileExists = Boolean(existing); if (await getOwnedRestaurant(credential.user.uid)) { router.push("/espace-resto"); return; } } catch { setStatus("Cette adresse e-mail possède déjà un compte. Vérifiez le mot de passe ou connectez-vous."); setLoading(false); return; } } try { if (!profileExists) await registerProfile(credential.user, { displayName: form.get("ownerName"), phone: form.get("phone"), country: form.get("country"), city: form.get("city"), role: "restaurant_owner" }); const name = form.get("name").trim(); const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); await createRestaurant(credential.user.uid, { slug, name, category: form.get("category"), phone: form.get("phone"), address: form.get("address"), country: form.get("country"), city: form.get("city"), plan, deliveryMode: delivery }); router.push("/espace-resto"); } catch (firestoreError) { setStatus(explainFirestoreError(firestoreError)); } finally { setLoading(false); } }
-  return <PlatformShell><main className="onboarding-page"><Link className="back-link" href="/"><ChevronLeft size={17} />Retour à Miamgo</Link><div className="onboarding-title"><p className="eyebrow">COMPTE RESTAURANT</p><h1>Créez votre espace professionnel.</h1><p>Ce compte est distinct d&apos;un compte client. Il donne accès à votre boutique, vos menus, commandes, livreurs et statistiques.</p></div><form className="onboarding-form" onSubmit={submitRestaurant}><section><h2>Votre compte restaurant</h2><label><UserRound size={14} />Nom du responsable<input name="ownerName" required placeholder="Votre nom" /></label><label><Mail size={14} />Adresse e-mail professionnelle<input name="email" type="email" required placeholder="restaurant@exemple.com" /></label><label>Mot de passe<input name="password" type="password" required minLength="6" placeholder="6 caractères minimum" /></label></section><section><h2>Votre établissement</h2><label>Nom du restaurant<input name="name" required placeholder="Ex. Chez Aïcha" /></label><label>Type de cuisine<select name="category" defaultValue=""><option value="" disabled>Sélectionnez une catégorie</option><option>Cuisine béninoise</option><option>Grillades</option><option>Pâtes et pizzas</option><option>Pâtisserie</option></select></label><label>Numéro WhatsApp<input name="phone" required type="tel" placeholder="+229 00 00 00 00" /></label><label>Adresse<input name="address" required placeholder="Quartier, rue, ville" /></label></section><section><h2>Votre formule</h2><div className="plan-options">{plans.map(([id, title, price, features]) => <button type="button" className={plan === id ? "selected" : ""} onClick={() => setPlan(id)} key={id}><div><strong>{title}</strong><b>{price}<small>/mois</small></b></div><ul>{features.map((feature) => <li key={feature}><Check size={14} />{feature}</li>)}</ul></button>)}</div></section><section><h2>Livraison</h2><div className="delivery-options onboarding-delivery"><button type="button" className={delivery === "internal" ? "selected" : ""} onClick={() => setDelivery("internal")}><Truck size={22} /><div><strong>J&apos;ai mes propres livreurs</strong><span>Vous les ajouterez après création de la boutique.</span></div>{delivery === "internal" && <Check size={17} />}</button><button type="button" className={delivery === "partner" ? "selected" : ""} onClick={() => setDelivery("partner")}><Store size={22} /><div><strong>Utiliser le réseau Miamgo</strong><span>Accédez aux livreurs et agences partenaires.</span></div>{delivery === "partner" && <Check size={17} />}</button></div></section><button className="create-restaurant" type="submit" disabled={loading}>{loading ? "Création du compte..." : "Créer mon compte restaurant"}</button>{status && <p className="onboarding-status">{status}</p>}<p className="onboarding-login">Vous avez déjà un compte restaurant? <Link href="/connexion">Se connecter</Link></p></form></main></PlatformShell>;
+  const [step, setStep] = useState(1);
+  const [plan, setPlan] = useState("pro");
+  const [delivery, setDelivery] = useState("internal");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const formRef = useRef(null);
+  const router = useRouter();
+
+  function nextStep() {
+    const fields = formRef.current?.querySelectorAll(`[data-step="${step}"] input, [data-step="${step}"] select`) || [];
+    if ([...fields].some((field) => !field.reportValidity())) return;
+    setStatus("");
+    setStep((current) => Math.min(3, current + 1));
+  }
+
+  async function submitRestaurant(event) {
+    event.preventDefault();
+    setLoading(true); setStatus("");
+    const form = new FormData(event.currentTarget);
+    try {
+      let credential;
+      let profileExists = false;
+      try {
+        credential = await createUserWithEmailAndPassword(auth, String(form.get("email")).trim().toLowerCase(), form.get("password"));
+      } catch (authError) {
+        if (authError.code !== "auth/email-already-in-use") throw authError;
+        credential = await signInWithEmailAndPassword(auth, String(form.get("email")).trim().toLowerCase(), form.get("password"));
+        const existing = await getUserProfile(credential.user.uid);
+        if (existing?.role && existing.role !== "restaurant_owner") throw new Error("Cette adresse e-mail est déjà utilisée pour un autre type de compte.");
+        profileExists = Boolean(existing);
+        if (await getOwnedRestaurant(credential.user.uid)) { router.push("/espace-resto"); return; }
+      }
+      if (!profileExists) await registerProfile(credential.user, { displayName: form.get("ownerName"), phone: form.get("phone"), country: form.get("country"), city: form.get("city"), role: "restaurant_owner" });
+      const name = String(form.get("name")).trim();
+      const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      await createRestaurant(credential.user.uid, { slug, name, category: form.get("category"), phone: form.get("phone"), address: form.get("address"), country: form.get("country"), city: form.get("city"), plan, deliveryMode: delivery });
+      router.push("/espace-resto");
+    } catch (error) {
+      const authMessages = { "auth/invalid-email": "L’adresse e-mail n’est pas valide.", "auth/weak-password": "Le mot de passe doit contenir au moins 6 caractères.", "auth/invalid-credential": "L’adresse e-mail ou le mot de passe est incorrect.", "auth/wrong-password": "L’adresse e-mail ou le mot de passe est incorrect.", "auth/network-request-failed": "Connexion impossible. Vérifiez Internet puis réessayez." };
+      setStatus(authMessages[error.code] || (error.message?.startsWith("Cette adresse") ? error.message : explainFirestoreError(error)));
+    } finally { setLoading(false); }
+  }
+
+  return <PlatformShell><main className="onboarding-page restaurant-onboarding"><Link className="back-link" href="/"><ChevronLeft size={17}/>Retour à Miamgo</Link><div className="onboarding-title"><p className="eyebrow">COMPTE RESTAURANT</p><h1>Votre espace professionnel en 3 étapes.</h1><p>Quelques informations suffisent pour commencer. Vous pourrez compléter votre boutique plus tard.</p></div><div className="signup-progress" aria-label="Progression de l’inscription">{steps.map((label, index) => <div className={step >= index + 1 ? "active" : ""} key={label}><span>{index + 1}</span><small>{label}</small></div>)}</div><form ref={formRef} className="onboarding-form" onSubmit={submitRestaurant}>
+    <section data-step="1" hidden={step !== 1}><h2>1. Votre compte</h2><label><UserRound size={14}/>Nom du responsable<input name="ownerName" required placeholder="Votre nom"/></label><label><Mail size={14}/>Adresse e-mail professionnelle<input name="email" type="email" required placeholder="restaurant@exemple.com"/></label><label>Mot de passe<input name="password" type="password" minLength="6" required placeholder="6 caractères minimum"/></label><button className="signup-next" type="button" onClick={nextStep}>Continuer <ChevronRight size={16}/></button></section>
+    <section data-step="2" hidden={step !== 2}><h2>2. Votre restaurant</h2><label>Nom du restaurant<input name="name" required placeholder="Ex. Chez Aïcha"/></label><label>Type de cuisine<select name="category" defaultValue="" required><option value="" disabled>Sélectionnez une catégorie</option><option>Cuisine béninoise</option><option>Grillades</option><option>Pâtes et pizzas</option><option>Pâtisserie</option></select></label><label>Numéro WhatsApp<input name="phone" required type="tel" placeholder="+229 00 00 00 00"/><small>Ce numéro peut être partagé par plusieurs comptes.</small></label><label>Adresse<input name="address" required placeholder="Quartier, rue, ville"/></label><div className="signup-step-actions"><button type="button" onClick={() => setStep(1)}>Retour</button><button className="signup-next" type="button" onClick={nextStep}>Continuer <ChevronRight size={16}/></button></div></section>
+    <section data-step="3" hidden={step !== 3}><h2>3. Votre formule et livraison</h2><div className="plan-options">{plans.map(([id, title, price, features]) => <button type="button" className={plan === id ? "selected" : ""} onClick={() => setPlan(id)} key={id}><div><strong>{title}</strong><b>{price}<small>/mois</small></b></div><ul>{features.map((feature) => <li key={feature}><Check size={14}/>{feature}</li>)}</ul></button>)}</div><div className="delivery-options onboarding-delivery"><button type="button" className={delivery === "internal" ? "selected" : ""} onClick={() => setDelivery("internal")}><Truck size={22}/><div><strong>Mes propres livreurs</strong><span>Vous les ajouterez après création.</span></div></button><button type="button" className={delivery === "partner" ? "selected" : ""} onClick={() => setDelivery("partner")}><Store size={22}/><div><strong>Le réseau Miamgo</strong><span>Accédez aux livreurs partenaires.</span></div></button></div><div className="signup-step-actions"><button type="button" onClick={() => setStep(2)}>Retour</button><button className="create-restaurant" type="submit" disabled={loading}>{loading ? "Création..." : "Créer mon compte"}</button></div></section>
+    {status && <p className="onboarding-status" role="alert">{status}</p>}<p className="onboarding-login">Vous avez déjà un compte restaurant ? <Link href="/connexion">Se connecter</Link></p></form></main></PlatformShell>;
 }

@@ -1,5 +1,4 @@
 import { firebaseApp } from "./firebase";
-import { normalizePhone } from "./phone";
 
 async function firestore() {
   const api = await import("firebase/firestore");
@@ -35,17 +34,9 @@ export async function getOwnedRestaurant(userId) {
 }
 
 export async function registerProfile(user, profile) {
-  const { db, doc, runTransaction, serverTimestamp } = await firestore();
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
   const profileRef = doc(db, "users", user.uid);
-  const phone = normalizePhone(profile.phone);
-  const phoneRef = phone ? doc(db, "phoneIndex", phone) : null;
-  await runTransaction(db, async (transaction) => {
-    if (phoneRef) {
-      const existing = await transaction.get(phoneRef);
-      if (existing.exists && existing.data().userId !== user.uid) throw new Error("phone-already-used");
-      transaction.set(phoneRef, { userId: user.uid, role: profile.role, phone, updatedAt: serverTimestamp() }, { merge: true });
-    }
-    transaction.set(profileRef, {
+  await setDoc(profileRef, {
     displayName: profile.displayName,
     email: user.email || null,
     phone: profile.phone || null,
@@ -54,8 +45,7 @@ export async function registerProfile(user, profile) {
     role: profile.role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    });
-  });
+  }, { merge: true });
 }
 
 export async function getDriverApplication(userId) {
@@ -65,11 +55,10 @@ export async function getDriverApplication(userId) {
 }
 
 export function explainFirestoreError(error) {
-  if (error?.message === "phone-already-used") return "Ce numéro de téléphone est déjà associé à un compte.";
-  if (error?.code === "permission-denied") return "Firestore a refusé l'écriture. Publiez les règles Firestore actuelles, puis réessayez avec le même e-mail et mot de passe.";
-  if (error?.code === "failed-precondition") return "Cloud Firestore n'est pas activé dans le projet miamgo-2479d. Activez Firestore Database dans Firebase Console.";
-  if (error?.code === "unavailable") return "Firestore est indisponible ou la connexion Internet est interrompue.";
-  return `Impossible d'enregistrer les données Firestore${error?.code ? ` (${error.code})` : ""}.`;
+  if (error?.code === "permission-denied") return "Nous n’avons pas pu enregistrer votre profil. Vérifiez les autorisations Firebase puis réessayez.";
+  if (error?.code === "failed-precondition") return "Le service de données n’est pas encore activé. Réessayez dans quelques instants.";
+  if (error?.code === "unavailable") return "La connexion au service est momentanément indisponible. Vérifiez Internet puis réessayez.";
+  return "Nous n’avons pas pu enregistrer vos informations. Vérifiez les champs puis réessayez.";
 }
 
 export async function updateProfileSettings(userId, changes) {
