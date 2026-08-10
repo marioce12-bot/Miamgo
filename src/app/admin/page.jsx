@@ -62,7 +62,7 @@ export default function AdminPage() {
   async function login(event) {
     event.preventDefault(); setError("");
     const response = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
-    if (!response.ok) { setError("Mot de passe administrateur invalide."); return; }
+    if (!response.ok) { const payload = await response.json().catch(() => ({})); setError(payload.error || "Connexion administrateur impossible."); return; }
     setAuthenticated(true); load();
   }
 
