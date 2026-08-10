@@ -24,17 +24,16 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, addRestaurantReply, createStory, ensureCustomerProfile, getActiveStories, getFeedData, getPostEngagement, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, createStory, deleteStory, ensureCustomerProfile, getActiveStories, getStoryViewCount, recordStoryView, getFeedData, getPostEngagement, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 import { usePreferences } from "./PreferencesProvider";
 
-function StoryViewer({ stories, index, onClose }) {
-  const story = stories[index];
-  useEffect(() => { const timer = window.setTimeout(() => index + 1 < stories.length ? onClose(index + 1) : onClose(null), 5000); return () => window.clearTimeout(timer); }, [index, stories.length, onClose]);
+function StoryViewer({ stories, index, user, onClose }) {
+  const story = stories[index]; const [views, setViews] = useState(0);
+  useEffect(() => { if (!story) return; if (user && story.ownerId !== user.uid) recordStoryView(story.id, user.uid).catch(() => {}); getStoryViewCount(story?.id).then(setViews).catch(() => {}); const timer = window.setTimeout(() => index + 1 < stories.length ? onClose(index + 1) : onClose(null), 5000); return () => window.clearTimeout(timer); }, [story?.id, index, stories.length, user, onClose]);
   if (!story) return null;
-  return <div className="story-viewer" role="dialog" aria-label="Story"><div className="story-progress"><span /></div><button className="story-viewer-close" onClick={() => onClose(null)}>×</button>{story.mediaType === "video" ? <video src={story.mediaUrl} autoPlay playsInline onEnded={() => onClose(index + 1 < stories.length ? index + 1 : null)} /> : <img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} />}<strong>{story.authorName || "Utilisateur"}</strong></div>;
-}
-export default function MiamgoFeed() {
+  return <div className="story-viewer" role="dialog" aria-label="Story"><div className="story-progress-multi">{stories.map((item, itemIndex) => <span className={itemIndex < index ? "done" : itemIndex === index ? "current" : ""} key={item.id}/>)}</div><button className="story-viewer-close" onClick={() => onClose(null)}>×</button>{story.mediaType === "video" ? <video src={story.mediaUrl} autoPlay playsInline onEnded={() => onClose(index + 1 < stories.length ? index + 1 : null)} /> : <img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} />}<strong>{story.authorName || "Utilisateur"}</strong>{user?.uid === story.ownerId && <span className="story-view-count">◉ {views}</span>}</div>;
+}export default function MiamgoFeed() {
   const { t } = usePreferences() || { t: (key) => key };
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -156,12 +155,14 @@ export default function MiamgoFeed() {
 
   function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
-  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadMediaFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); const activeStories = await getActiveStories(); setStories(activeStories); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
+  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadMediaFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); setStories(await getActiveStories()); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
+  async function removeStory(storyIds) { if (!window.confirm("Supprimer cette story ?")) return; await Promise.all(storyIds.map((id) => deleteStory(id))); setStories((current) => current.filter((story) => !storyIds.includes(story.id))); }
 
+  const storyGroups = Object.values(stories.reduce((groups, story) => { const key = story.ownerId || story.authorName || story.id; (groups[key] ||= []).push(story); return groups; }, {})).sort((a, b) => { const ownA = user && a[0].ownerId === user.uid ? 1 : 0; const ownB = user && b[0].ownerId === user.uid ? 1 : 0; return ownB - ownA; });
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <main className={`app-shell ${roleReady ? "" : "role-feed-loading"}`}>{storyViewer !== null && <StoryViewer stories={stories} index={storyViewer} onClose={setStoryViewer}/>}
+    <main className={`app-shell ${roleReady ? "" : "role-feed-loading"}`}>{storyViewer !== null && <StoryViewer stories={storyGroups[storyViewer.group] || []} index={storyViewer.index} user={user} onClose={(next) => next === null ? setStoryViewer(null) : setStoryViewer({ group: storyViewer.group, index: next })}/>}
       <header className="topbar">
         <a className="brand brand-with-logo" href="/accueil" aria-label="Miamgo accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></a>
         <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un plat, un resto..." /></label>
@@ -186,7 +187,7 @@ export default function MiamgoFeed() {
         <section className="feed" id="feed">
           <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? t("feed") : t("nearby")}</p><h1>{role === "restaurant_owner" ? t("feed") : t("craving")}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> {t("filter")}</button>}</div>
           {feedError && <p className="settings-notice">{feedError}</p>}<div className="restaurant-stories">
-            <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onChange={publishStory} /><span className="story-add-icon">+</span><div><strong>Votre story</strong><small>Ajouter une photo ou vidéo</small></div></label>{stories.map((story, index) => <button className="restaurant-story" key={story.id} onClick={() => setStoryViewer(index)}><img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} /><span className="story-shade" /><b style={{ backgroundColor: "#245d4c" }}>{(story.authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{story.authorName || "Utilisateur"}</strong><small>Story</small></div></button>)}
+            <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onChange={publishStory} /><span className="story-add-icon">+</span><div><strong>Publier</strong><small>Ajouter une story</small></div></label>{storyGroups.map((group, groupIndex) => <div className="story-group" key={group[0].ownerId || group[0].id}><button className="restaurant-story" onClick={() => setStoryViewer({ group: groupIndex, index: 0 })}>{group[0].mediaType === "video" ? <video src={group[0].mediaUrl} muted playsInline preload="metadata"/> : <img src={group[0].mediaUrl} alt={`Story de ${group[0].authorName || "Utilisateur"}`}/>}<span className="story-shade"/><b style={{ backgroundColor: "#245d4c" }}>{(group[0].authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{group[0].authorName || "Utilisateur"}</strong><small>{group.length} story{group.length === 1 ? "" : "s"} · {group[0].createdAt?.toDate?.()?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) || ""}</small></div></button>{user?.uid === group[0].ownerId && <button className="story-delete-button" onClick={() => removeStory(group.map((story) => story.id))} aria-label="Supprimer mes stories">×</button>}</div>)}
           </div>
 
           {visiblePosts.map((post) => {

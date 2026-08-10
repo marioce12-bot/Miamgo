@@ -94,6 +94,10 @@ export async function createRestaurantPost(ownerId, restaurantId, post) {
   });
 }
 
+export async function deleteStory(storyId) {
+  const { db, deleteDoc, doc } = await firestore();
+  await deleteDoc(doc(db, "stories", storyId));
+}
 export async function getRestaurantReviews(restaurantId) {
   const { collection, db, getDocs, limit, orderBy, query } = await firestore();
   const snapshot = await getDocs(query(collection(db, "restaurants", restaurantId, "reviews"), orderBy("createdAt", "desc"), limit(100)));
@@ -259,12 +263,30 @@ export async function getFeedData() {
   const restaurants = restaurantSnapshot.docs.map((item) => { const data = item.data(); const name = data.name || item.id; return [name, String(data.rating || "-"), data.city || "Disponible", name.slice(0, 2).toUpperCase(), "#4a7558", data.photoURL || data.coverURL || ""]; });
   return { posts, restaurants, stories };
 }
+export async function updateRestaurantMenuItem(restaurantId, itemId, changes) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "restaurants", restaurantId, "menuItems", itemId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function deleteRestaurantMenuItem(restaurantId, itemId) {
+  const { db, deleteDoc, doc } = await firestore();
+  await deleteDoc(doc(db, "restaurants", restaurantId, "menuItems", itemId));
+}
 export async function createStory(ownerId, story) {
   const { addDoc, collection, db, serverTimestamp, Timestamp } = await firestore();
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + 86400000));
   return addDoc(collection(db, "stories"), { ...story, ownerId, status: "active", createdAt: serverTimestamp(), expiresAt, updatedAt: serverTimestamp() });
 }
 
+export async function recordStoryView(storyId, userId) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "stories", storyId, "views", userId), { userId, viewedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function getStoryViewCount(storyId) {
+  const { collection, db, getDocs } = await firestore();
+  return (await getDocs(collection(db, "stories", storyId, "views"))).size;
+}
 export async function getActiveStories() {
   const { collection, db, getDocs, limit, orderBy, query, Timestamp, where } = await firestore();
   const snapshot = await getDocs(query(collection(db, "stories"), where("status", "==", "active"), orderBy("createdAt", "desc"), limit(50)));
