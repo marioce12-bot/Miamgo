@@ -28,7 +28,7 @@ export default function DriverApplication() {
     try {
       const { user, profile: existingProfile } = await authenticateForSignup(data.get("email"), data.get("password"), "driver");
       const profile = { displayName: `${data.get("firstName")} ${data.get("lastName")}`, phone: data.get("phone"), country: data.get("country"), city: data.get("city"), role: "driver", verificationStatus: "pending", subscriptionStatus: "locked", availabilityStatus: "unavailable" };
-      if (!existingProfile) await registerProfile(user, profile);
+      if (!existingProfile) await registerProfile(user, { ...profile, email: data.get("email") });
       const identityDocumentUrl = await uploadImageFile(idFile, { maxWidth: 1800, quality: .82 });
       await createDriverApplication(user.uid, { firstName: data.get("firstName"), lastName: data.get("lastName"), phone: data.get("phone"), city: data.get("city"), country: data.get("country"), gender: data.get("gender"), identityDocumentUrl, restaurantInvitation: restaurantId || null });
       await publishDriverDirectory(user.uid, profile);
@@ -36,7 +36,7 @@ export default function DriverApplication() {
       await createServerSession(user);
       router.replace(signupDestination("driver"));
     } catch (error) {
-      setStatus(error.code === "phone-already-used" ? "Ce numéro de téléphone est déjà associé à un compte." : error.code === "permission-denied" ? "Impossible d’enregistrer le profil. Les règles Firebase refusent cette opération." : explainAuthError(error));
+      setStatus(error.code === "permission-denied" ? "Impossible d’enregistrer le profil. Les règles Firebase refusent cette opération." : explainAuthError(error));
     } finally { setLoading(false); }
   }
 

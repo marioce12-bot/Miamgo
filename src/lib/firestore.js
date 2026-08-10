@@ -1,5 +1,4 @@
 import { firebaseApp } from "./firebase";
-import { normalizePhone } from "./phone";
 
 async function firestore() {
   const api = await import("firebase/firestore");
@@ -35,35 +34,18 @@ export async function getOwnedRestaurant(userId) {
 }
 
 export async function registerProfile(user, profile) {
-  const { db, doc, runTransaction, serverTimestamp } = await firestore();
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
   const profileRef = doc(db, "users", user.uid);
-  const phone = normalizePhone(profile.phone);
-  const phoneRef = phone ? doc(db, "phoneIndex", phone) : null;
-  await runTransaction(db, async (transaction) => {
-    const existingProfile = await transaction.get(profileRef);
-    const existingProfileData = existingProfile.exists() ? existingProfile.data() : null;
-    if (existingProfileData?.role && existingProfileData.role !== profile.role) {
-      throw new Error("role-already-used");
-    }
-    if (phoneRef) {
-      const existing = await transaction.get(phoneRef);
-      const existingPhoneData = existing.exists() ? existing.data() : null;
-      if (existingPhoneData?.userId && existingPhoneData.userId !== user.uid) throw new Error("phone-already-used");
-      transaction.set(phoneRef, { userId: user.uid, role: profile.role, phone, updatedAt: serverTimestamp() }, { merge: true });
-    }
-    const values = {
-      displayName: profile.displayName,
-      phone: profile.phone || null,
-      country: profile.country || "BJ",
-      city: profile.city || "Cotonou",
-      updatedAt: serverTimestamp(),
-    };
-    if (existingProfileData) {
-      transaction.set(profileRef, values, { merge: true });
-    } else {
-      transaction.set(profileRef, { ...values, email: user.email || null, role: profile.role, createdAt: serverTimestamp() });
-    }
-  });
+  await setDoc(profileRef, {
+    displayName: profile.displayName,
+    email: profile.email || user.email || null,
+    phone: profile.phone || null,
+    country: profile.country || "BJ",
+    city: profile.city || "Cotonou",
+    role: profile.role,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function getDriverApplication(userId) {
@@ -73,7 +55,6 @@ export async function getDriverApplication(userId) {
 }
 
 export function explainFirestoreError(error) {
-  if (error?.message === "phone-already-used") return "Ce numéro de téléphone est déjà associé à un compte.";
   if (error?.code === "permission-denied") return "Firestore a refusé l'écriture. Publiez les règles Firestore actuelles, puis réessayez avec le même e-mail et mot de passe.";
   if (error?.code === "failed-precondition") return "Cloud Firestore n'est pas activé dans le projet miamgo-2479d. Activez Firestore Database dans Firebase Console.";
   if (error?.code === "unavailable") return "Firestore est indisponible ou la connexion Internet est interrompue.";

@@ -25,7 +25,7 @@ export async function authenticateForSignup(email, password, role) {
     throw error;
   }
 
-  return { user: credential.user, profile, existing };
+  return { user: credential.user, profile, existing, contactEmail: normalizedEmail };
 }
 
 export async function createServerSession(user) {
