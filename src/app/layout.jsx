@@ -9,7 +9,6 @@ import "./subscription.css";
 import "./account-ui.css";
 import MobileRoleNav from "../components/MobileRoleNav";
 import { PreferencesProvider } from "../components/PreferencesProvider";
-import { AuthProvider } from "../components/auth-provider";
 
 export const metadata = {
   title: "Miamgo | Le fil qui donne faim",
@@ -20,7 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <head><link rel="preload" as="image" href="/miamgo-logo.png" fetchPriority="high" /></head>
-      <body><AuthProvider><PreferencesProvider>{children}<MobileRoleNav /></PreferencesProvider></AuthProvider></body>
+      <body><PreferencesProvider>{children}<MobileRoleNav /></PreferencesProvider></body>
     </html>
   );
 }

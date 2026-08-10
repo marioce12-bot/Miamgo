@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Miamgo
 
-## Getting Started
+Miamgo est le fil d'actualites des restaurants et des plats pres de chez soi. Cette application Next.js place directement les publications des restaurants, promotions et plats du jour au coeur de l'accueil.
 
-First, run the development server:
+## Demarrage
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez ensuite `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Firebase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+La configuration du projet Firebase Miamgo est definie dans `src/lib/firebase.js`. Activez le fournisseur **E-mail/Mot de passe** dans Firebase Authentication pour permettre la creation de compte et la connexion.
 
-## Learn More
+Les likes, commentaires, favoris, panier et commandes sont proteges. Lorsqu'un visiteur les declenche sans etre connecte, Miamgo ouvre la connexion et rejoue automatiquement l'action une fois la session etablie.
 
-To learn more about Next.js, take a look at the following resources:
+Le cahier des charges produit est disponible dans [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Application mobile
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Le projet Expo React Native est dans [`mobile/`](mobile/). Il partage le projet Firebase Miamgo avec le site Next.js. Lancez-le avec `cd mobile` puis `npx expo start`.
 
-## Deploy on Vercel
+## Firestore
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Les regles de securite sont dans [`firestore.rules`](firestore.rules) et les index dans [`firestore.indexes.json`](firestore.indexes.json). Activez Cloud Firestore, puis copiez les regles dans **Firestore Database > Rules** de Firebase Console.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Les collections utilisees sont `users`, `restaurants`, `posts`, `favorites`, `carts`, `orders` et `notifications`. Un client ne peut acceder qu'a son propre profil, panier, favoris et commandes. Les donnees restaurant sont protegees par le champ `ownerId`.
+
+Pour publier exactement les regles du depot avec Firebase CLI: `npx firebase-tools login`, puis `npx firebase-tools use miamgo-2479d` et `npx firebase-tools deploy --only firestore`. Sans cette publication, Firebase Authentication peut creer un e-mail mais Firestore refusera la creation du profil associe.
+
+## Administration
+
+La console web séparée est disponible à `/admin`. Configurez `MIAMGO_ADMIN_PASSWORD` dans les variables Vercel. Le mot de passe ne doit jamais être écrit dans Git. Cette page n'est pas liée depuis l'application mobile.
+
+Les médias sont téléversés vers Cloudinary par `/api/upload-media`. Configurez `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` et `CLOUDINARY_API_SECRET` uniquement dans Vercel.
+
+Les routes protégées utilisent également `MIAMGO_SESSION_SECRET`, une valeur aléatoire longue utilisée pour signer la session rôle après vérification Firebase.
+
+## Paiements
+
+Les frais de commande sont calculés par `src/lib/orderFees.js`: 100 FCFA jusqu'à 2 000 FCFA, 150 FCFA jusqu'à 10 000 FCFA, puis 200 FCFA. Les routes serveur `/api/fedapay/create-transaction` et `/api/fedapay/webhook` gardent la clé FedaPay hors du navigateur. Activez et configurez les payouts/marketplace FedaPay avant d'activer les transferts vers les bénéficiaires restaurant et livreur.

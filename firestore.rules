@@ -6,174 +6,182 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
-    function userDataAfter() {
-      return getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function isPlatformAdmin() {
+      return signedIn() && request.auth.token.admin == true;
     }
 
-    function isAdmin() {
-      return signedIn() && userData().role == 'admin';
-    }
-
-    function ownsRestaurant(restaurantId) {
+    function isRestaurantOwner(restaurantId) {
       return signedIn()
         && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
     }
 
-    function ownsAgency(agencyId) {
-      return signedIn()
-        && get(/databases/$(database)/documents/deliveryAgencies/$(agencyId)).data.ownerId == request.auth.uid;
-    }
-
-    function isAssignedCourier() {
-      return signedIn() && resource.data.assignedCourierId == request.auth.uid;
-    }
-
-    function validSelfServiceRole(role) {
-      return role in ['client', 'restaurant', 'courier'];
-    }
-
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.id == request.auth.uid
-        && request.resource.data.email == request.auth.token.email
-        && validSelfServiceRole(request.resource.data.role);
-      allow update: if isAdmin() || (signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
+      allow read: if isSelf(userId) || isPlatformAdmin();
+      allow create: if isSelf(userId)
+        && request.resource.data.role in ['client', 'restaurant_owner', 'driver']
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'phone', 'country', 'city', 'role', 'createdAt', 'updatedAt']);
+      allow update: if isSelf(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'phone', 'country', 'city', 'photoURL', 'addresses', 'payoutDetails', 'payoutStatus', 'pushToken', 'pushPlatform', 'availabilityStatus', 'updatedAt']);
     }
 
     match /restaurants/{restaurantId} {
-      allow read: if true;
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerId == request.auth.uid)
+        || isPlatformAdmin();
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && userDataAfter().role == 'restaurant';
-      allow update: if isAdmin() || (ownsRestaurant(restaurantId)
-        && request.resource.data.ownerId == resource.data.ownerId);
-      allow delete: if isAdmin() || ownsRestaurant(restaurantId);
-    }
+        && request.resource.data.status == 'pending';
+      allow update: if isPlatformAdmin()
+        || (isRestaurantOwner(restaurantId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'category', 'phone', 'address', 'city', 'country', 'description', 'coverURL', 'photoURL', 'openingHours', 'deliveryMode', 'updatedAt']));
 
-    match /dishes/{dishId} {
-      allow read: if true;
-      allow create: if ownsRestaurant(request.resource.data.restaurantId);
-      allow update: if isAdmin() || (ownsRestaurant(resource.data.restaurantId)
-        && request.resource.data.restaurantId == resource.data.restaurantId);
-      allow delete: if ownsRestaurant(resource.data.restaurantId) || isAdmin();
-    }
+      match /menuItems/{itemId} {
+        allow read: if get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.status == 'active' || isRestaurantOwner(restaurantId);
+        allow write: if isRestaurantOwner(restaurantId) || isPlatformAdmin();
+      }
 
-    match /orders/{orderId} {
-      allow create: if signedIn()
-        && request.resource.data.clientId == request.auth.uid
-        && (request.resource.data.status == 'pending_payment'
-          || (request.resource.data.status == 'paid'
-            && request.resource.data.paymentMethod == 'cash'));
-      allow read: if signedIn() && (
-        resource.data.clientId == request.auth.uid
-        || ownsRestaurant(resource.data.restaurantId)
-        || resource.data.assignedCourierId == request.auth.uid
-        || isAdmin()
-      );
-      allow update: if isAdmin() || (ownsRestaurant(resource.data.restaurantId)
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status', 'assignedCourierId', 'deliveryProvider', 'courierLocation', 'courierLocationUpdatedAt', 'externalCourierAcceptedAt', 'pickedUpAt', 'updatedAt']))
-        || (isAssignedCourier()
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'courierLocation', 'courierLocationUpdatedAt', 'externalCourierAcceptedAt', 'updatedAt']));
-      allow delete: if isAdmin();
-    }
-
-    match /internalCouriers/{courierId} {
-      allow read: if signedIn() && (
-        resource.data.userId == request.auth.uid
-        || ownsRestaurant(resource.data.restaurantId)
-        || isAdmin()
-      );
-      allow create: if ownsRestaurant(request.resource.data.restaurantId);
-      allow update: if isAdmin() || (ownsRestaurant(resource.data.restaurantId)
-        && request.resource.data.restaurantId == resource.data.restaurantId);
-      allow delete: if ownsRestaurant(resource.data.restaurantId) || isAdmin();
-
-      match /deliveryHistory/{entryId} {
-        allow read, write: if isAdmin()
-          || ownsRestaurant(get(/databases/$(database)/documents/internalCouriers/$(courierId)).data.restaurantId);
+      match /drivers/{driverId} {
+        allow read: if isRestaurantOwner(restaurantId) || isSelf(driverId) || isPlatformAdmin();
+        allow create, update: if isRestaurantOwner(restaurantId) || isPlatformAdmin();
+        allow delete: if isRestaurantOwner(restaurantId) || isPlatformAdmin();
       }
     }
 
-    match /independentCouriers/{courierId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin() || (signedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId);
-      allow delete: if isAdmin();
-
-      match /deliveryHistory/{entryId} {
-        allow read: if signedIn() && (
-          get(/databases/$(database)/documents/independentCouriers/$(courierId)).data.userId == request.auth.uid
-          || isAdmin()
-        );
-        allow write: if isAdmin();
-      }
-    }
-
-    match /deliveryAgencies/{agencyId} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && userData().role == 'agency';
-      allow update: if isAdmin() || (ownsAgency(agencyId)
-        && request.resource.data.ownerId == resource.data.ownerId);
-      allow delete: if ownsAgency(agencyId) || isAdmin();
-
-      match /deliveryHistory/{entryId} {
-        allow read: if ownsAgency(agencyId) || isAdmin();
-        allow write: if isAdmin();
-      }
-    }
-
-    match /publications/{publicationId} {
-      allow read: if true;
-      allow create: if ownsRestaurant(request.resource.data.restaurantId);
-      allow update: if isAdmin() || (ownsRestaurant(resource.data.restaurantId)
-        && request.resource.data.restaurantId == resource.data.restaurantId);
-      allow delete: if ownsRestaurant(resource.data.restaurantId) || isAdmin();
+    match /posts/{postId} {
+      allow read: if resource.data.moderationStatus != 'removed'
+        && get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.status == 'active';
+      allow create: if signedIn() && isRestaurantOwner(request.resource.data.restaurantId);
+      allow update, delete: if signedIn() && isRestaurantOwner(resource.data.restaurantId);
 
       match /likes/{userId} {
         allow read: if true;
-        allow create: if signedIn()
-          && request.auth.uid == userId
-          && request.resource.data.userId == request.auth.uid;
-        allow delete: if signedIn() && (request.auth.uid == userId || isAdmin());
-        allow update: if false;
+        allow create: if isSelf(userId) && request.resource.data.userId == userId;
+        allow update, delete: if isSelf(userId);
       }
 
       match /comments/{commentId} {
         allow read: if true;
         allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update: if isAdmin() || (signedIn()
-          && resource.data.userId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['text', 'updatedAt']));
-        allow delete: if signedIn() && (
-          resource.data.userId == request.auth.uid || isAdmin()
-        );
+        allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if signedIn()
+            && isRestaurantOwner(get(/databases/$(database)/documents/posts/$(postId)).data.restaurantId)
+            && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+        }
       }
     }
 
-    match /subscriptions/{subscriptionId} {
-      allow read: if signedIn() && (
-        isAdmin()
-        || (resource.data.entityType == 'restaurant' && ownsRestaurant(resource.data.entityId))
-        || (resource.data.entityType == 'delivery_agency' && ownsAgency(resource.data.entityId))
-      );
-      // Les écritures de paiement sont effectuées par un backend privilégié après validation FedaPay.
-      allow write: if isAdmin();
+    match /favorites/{favoriteId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /carts/{userId} {
+      allow read, write: if isSelf(userId);
+    }
+
+    match /orders/{orderId} {
+      allow create: if signedIn() && request.resource.data.customerId == request.auth.uid
+        && get(/databases/$(database)/documents/restaurants/$(request.resource.data.restaurantId)).data.status == 'active';
+      allow read: if signedIn()
+        && (resource.data.customerId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+      allow update: if signedIn()
+        && (isRestaurantOwner(resource.data.restaurantId) || isPlatformAdmin());
+    }
+
+    match /paymentEvents/{eventId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+    }
+
+    match /driverApplications/{userId} {
+      allow create: if isSelf(userId)
+        && request.resource.data.userId == userId
+        && request.resource.data.keys().hasOnly([
+          'userId', 'firstName', 'lastName', 'phone', 'city', 'country',
+          'gender', 'identityDocumentUrl', 'restaurantInvitation',
+          'status', 'createdAt', 'updatedAt'
+        ]);
+      allow read: if isSelf(userId) || isPlatformAdmin();
+      allow update: if isPlatformAdmin()
+        || (isSelf(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'firstName', 'lastName', 'phone', 'city', 'country', 'gender',
+            'identityDocumentUrl', 'restaurantInvitation', 'updatedAt'
+          ]));
+    }
+
+    match /driverLocations/{driverId} {
+      allow read: if isSelf(driverId) || isPlatformAdmin();
+      allow create: if isSelf(driverId)
+        && request.resource.data.keys().hasOnly([
+          'latitude', 'longitude', 'accuracy', 'tracking', 'updatedAt'
+        ]);
+      allow update: if isSelf(driverId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'latitude', 'longitude', 'accuracy', 'tracking', 'updatedAt'
+        ]);
+    }
+
+    match /phoneIndex/{phoneKey} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.phone == phoneKey;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.phone == phoneKey;
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /driverRestaurants/{affiliationId} {
+      allow create: if signedIn() && request.resource.data.driverId == request.auth.uid;
+      allow read: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+      allow update: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+      allow delete: if signedIn()
+        && (resource.data.driverId == request.auth.uid
+          || isRestaurantOwner(resource.data.restaurantId)
+          || isPlatformAdmin());
+    }
+
+    match /driverDirectory/{driverId} {
+      allow read: if isPlatformAdmin()
+        || (signedIn()
+          && resource.data.verificationStatus == 'approved'
+          && resource.data.subscriptionStatus == 'active');
+      allow create: if isSelf(driverId)
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.subscriptionStatus in ['locked', 'pending_payment'];
+      allow update: if isSelf(driverId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'city', 'country',
+          'availabilityStatus', 'updatedAt'
+        ])
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus;
     }
   }
 }
