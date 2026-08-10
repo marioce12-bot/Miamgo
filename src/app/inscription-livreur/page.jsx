@@ -34,7 +34,7 @@ export default function DriverApplication() {
       await publishDriverDirectory(user.uid, profile);
       if (restaurantId) await createDriverAffiliation(user.uid, restaurantId, restaurantId);
       await createServerSession(user);
-      router.replace(signupDestination("driver"));
+      window.location.assign(signupDestination("driver"));
     } catch (error) {
       setStatus(error.code === "permission-denied" ? "Impossible d’enregistrer le profil. Les règles Firebase refusent cette opération." : explainAuthError(error));
     } finally { setLoading(false); }
