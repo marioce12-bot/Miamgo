@@ -55,11 +55,12 @@ export default function MiamgoFeed() {
   const [posts, setPosts] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [stories, setStories] = useState([]);
+  const [feedError, setFeedError] = useState("");
   const [storyViewer, setStoryViewer] = useState(null);
   const [role, setRole] = useState("client");
   const [roleReady, setRoleReady] = useState(false);
 
-  useEffect(() => { Promise.all([getFeedData(), getActiveStories()]).then(([result, activeStories]) => { setPosts(result.posts); setRestaurants(result.restaurants); setStories(activeStories); }).catch(() => {}); }, []);
+  useEffect(() => { Promise.all([getFeedData().catch((error) => { setFeedError("Impossible de charger les publications. Vérifiez votre connexion puis réessayez."); return { posts: [], restaurants: [] }; }), getActiveStories().catch(() => [])]).then(([result, activeStories]) => { setPosts(result.posts); setRestaurants(result.restaurants); setStories(activeStories); }); }, []);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
@@ -182,7 +183,7 @@ export default function MiamgoFeed() {
 
         <section className="feed" id="feed">
           <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? t("feed") : t("nearby")}</p><h1>{role === "restaurant_owner" ? t("feed") : t("craving")}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> {t("filter")}</button>}</div>
-          <div className="restaurant-stories">
+          {feedError && <p className="settings-notice">{feedError}</p>}<div className="restaurant-stories">
             <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onChange={publishStory} /><span className="story-add-icon">+</span><div><strong>Votre story</strong><small>Ajouter une photo ou vidéo</small></div></label>{stories.map((story, index) => <button className="restaurant-story" key={story.id} onClick={() => setStoryViewer(index)}><img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} /><span className="story-shade" /><b style={{ backgroundColor: "#245d4c" }}>{(story.authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{story.authorName || "Utilisateur"}</strong><small>Story</small></div></button>)}
           </div>
 

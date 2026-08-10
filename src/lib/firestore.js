@@ -209,7 +209,7 @@ export async function getActiveRestaurantDeliveries(restaurantId) {
 export async function getFeedData() {
   const { collection, db, getDocs, limit, orderBy, query, where } = await firestore();
   const [postSnapshot, restaurantSnapshot] = await Promise.all([
-    getDocs(query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(30))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, "posts"), limit(30))).catch((error) => { console.error("Feed posts read failed", error); return { docs: [] }; }),
     getDocs(query(collection(db, "restaurants"), where("status", "==", "active"), limit(30))).catch(() => ({ docs: [] })),
   ]);
   const posts = postSnapshot.docs.map((item) => { const data = item.data(); return { id: item.id, restaurant: data.restaurantName || data.restaurantId || "Restaurant", handle: data.handle || "", time: data.createdAt?.toDate?.()?.toLocaleDateString("fr-FR") || "", location: data.city || "", avatar: (data.restaurantName || "R").slice(0, 2).toUpperCase(), color: "#245d4c", text: data.text || "", image: data.mediaType === "image" ? data.mediaUrl : "", dish: data.dish || "", price: data.price ? `${data.price} FCFA` : "", likes: data.likeCount || 0, comments: data.commentCount || 0, promoted: false, restaurantId: data.restaurantId }; });
