@@ -24,64 +24,9 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, addRestaurantReply, ensureCustomerProfile, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, ensureCustomerProfile, getFeedData, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 import { usePreferences } from "./PreferencesProvider";
-
-const posts = [
-  {
-    id: 1,
-    restaurant: "Chez Aïcha",
-    handle: "@chezaicha.cotonou",
-    time: "Il y a 18 min",
-    location: "Cadjèhoun, Cotonou",
-    avatar: "CA",
-    color: "#f9703e",
-    text: "Le déjeuner est servi. Notre riz gras au poulet fumé sort tout juste de la cuisine, avec sa sauce maison.",
-    image: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=1000&q=85",
-    dish: "Riz gras au poulet fumé",
-    price: "2 500 FCFA",
-    likes: 126,
-    comments: 14,
-    promoted: true, restaurantId: "chez-aicha",
-  },
-  {
-    id: 2,
-    restaurant: "Le Comptoir de Koffi",
-    handle: "@comptoirdekoffi",
-    time: "Il y a 42 min",
-    location: "Akpakpa, Cotonou",
-    avatar: "CK",
-    color: "#1967d2",
-    text: "Aujourd'hui seulement: les spaghetti bolognaise à prix doux. Pensez à réserver avant 13h.",
-    image: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=1000&q=85",
-    dish: "Spaghetti bolognaise",
-    price: "1 800 FCFA",
-    likes: 74,
-    comments: 9, restaurantId: "comptoir-koffi",
-  },
-  {
-    id: 3,
-    restaurant: "Mami Grill",
-    handle: "@mamigrill",
-    time: "Il y a 1 h",
-    location: "Fidjrossè, Cotonou",
-    avatar: "MG",
-    color: "#245d4c",
-    text: "Vendredi braisé: poisson entier, alloco et piment vert. Livraison disponible ce soir.",
-    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85",
-    dish: "Poisson braisé & alloco",
-    price: "3 000 FCFA",
-    likes: 218,
-    comments: 31, restaurantId: "mami-grill",
-  },
-];
-
-const restaurants = [
-  ["La Terrasse", "4.8", "À 1,2 km", "LT", "#d14b41", "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=500&q=85"],
-  ["Sawa Kitchen", "4.6", "À 2,4 km", "SK", "#ea9c28", "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=500&q=85"],
-  ["Bénin Délices", "4.9", "À 3,1 km", "BD", "#4a7558", "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=500&q=85"],
-];
 
 export default function MiamgoFeed() {
   const { t } = usePreferences() || { t: (key) => key };
@@ -101,8 +46,12 @@ export default function MiamgoFeed() {
   const [authError, setAuthError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageErrors, setImageErrors] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [role, setRole] = useState("client");
   const [roleReady, setRoleReady] = useState(false);
+
+  useEffect(() => { getFeedData().then((result) => { setPosts(result.posts); setRestaurants(result.restaurants); }); }, []);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
