@@ -94,6 +94,16 @@ export async function createRestaurantPost(ownerId, restaurantId, post) {
   });
 }
 
+export async function getRestaurantReviews(restaurantId) {
+  const { collection, db, getDocs, limit, orderBy, query } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "restaurants", restaurantId, "reviews"), orderBy("createdAt", "desc"), limit(100)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+}
+
+export async function addRestaurantReview(restaurantId, userId, review) {
+  const { addDoc, collection, db, serverTimestamp } = await firestore();
+  return addDoc(collection(db, "restaurants", restaurantId, "reviews"), { ...review, userId, createdAt: serverTimestamp() });
+}
 export async function getRestaurantBySlug(slug) {
   const { collection, db, getDocs, limit, query, where } = await firestore();
   const snapshot = await getDocs(query(collection(db, "restaurants"), where("slug", "==", slug), limit(1)));
