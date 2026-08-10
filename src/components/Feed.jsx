@@ -24,10 +24,16 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, addRestaurantReply, ensureCustomerProfile, getFeedData, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, createStory, ensureCustomerProfile, getActiveStories, getFeedData, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 import { usePreferences } from "./PreferencesProvider";
 
+function StoryViewer({ stories, index, onClose }) {
+  const story = stories[index];
+  useEffect(() => { const timer = window.setTimeout(() => index + 1 < stories.length ? onClose(index + 1) : onClose(null), 5000); return () => window.clearTimeout(timer); }, [index, stories.length, onClose]);
+  if (!story) return null;
+  return <div className="story-viewer" role="dialog" aria-label="Story"><div className="story-progress"><span /></div><button className="story-viewer-close" onClick={() => onClose(null)}>×</button>{story.mediaType === "video" ? <video src={story.mediaUrl} autoPlay playsInline onEnded={() => onClose(index + 1 < stories.length ? index + 1 : null)} /> : <img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} />}<strong>{story.authorName || "Utilisateur"}</strong></div>;
+}
 export default function MiamgoFeed() {
   const { t } = usePreferences() || { t: (key) => key };
   const router = useRouter();
@@ -48,10 +54,12 @@ export default function MiamgoFeed() {
   const [imageErrors, setImageErrors] = useState([]);
   const [posts, setPosts] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
+  const [stories, setStories] = useState([]);
+  const [storyViewer, setStoryViewer] = useState(null);
   const [role, setRole] = useState("client");
   const [roleReady, setRoleReady] = useState(false);
 
-  useEffect(() => { getFeedData().then((result) => { setPosts(result.posts); setRestaurants(result.restaurants); }); }, []);
+  useEffect(() => { Promise.all([getFeedData(), getActiveStories()]).then(([result, activeStories]) => { setPosts(result.posts); setRestaurants(result.restaurants); setStories(activeStories); }).catch(() => {}); }, []);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
@@ -145,10 +153,12 @@ export default function MiamgoFeed() {
 
   function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
+  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadImageFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); const activeStories = await getActiveStories(); setStories(activeStories); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
+
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <main className={`app-shell ${roleReady ? "" : "role-feed-loading"}`}>
+    <main className={`app-shell ${roleReady ? "" : "role-feed-loading"}`}>{storyViewer !== null && <StoryViewer stories={stories} index={storyViewer} onClose={setStoryViewer}/>}
       <header className="topbar">
         <a className="brand brand-with-logo" href="/accueil" aria-label="Miamgo accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /><span>miam</span>go<i>.</i></a>
         <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher un plat, un resto..." /></label>
@@ -173,7 +183,7 @@ export default function MiamgoFeed() {
         <section className="feed" id="feed">
           <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? t("feed") : t("nearby")}</p><h1>{role === "restaurant_owner" ? t("feed") : t("craving")}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> {t("filter")}</button>}</div>
           <div className="restaurant-stories">
-            {restaurants.map(([name, rating, distance, initials, color, image]) => <button className="restaurant-story" key={name} onClick={() => router.push("/restaurant/chez-aicha")}><img src={image} alt={`Plat de ${name}`} /><span className="story-shade" /><b style={{ backgroundColor: color }}>{initials}</b><div><strong>{name}</strong><small>★ {rating} · {distance}</small></div></button>)}
+            <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onChange={publishStory} /><span className="story-add-icon">+</span><div><strong>Votre story</strong><small>Ajouter une photo ou vidéo</small></div></label>{stories.map((story, index) => <button className="restaurant-story" key={story.id} onClick={() => setStoryViewer(index)}><img src={story.mediaUrl} alt={`Story de ${story.authorName || "Utilisateur"}`} /><span className="story-shade" /><b style={{ backgroundColor: "#245d4c" }}>{(story.authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{story.authorName || "Utilisateur"}</strong><small>Story</small></div></button>)}
           </div>
 
           {visiblePosts.map((post) => {

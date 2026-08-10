@@ -29,7 +29,7 @@ service cloud.firestore {
     }
 
     match /restaurants/{restaurantId} {
-      allow read: if resource.data.status == 'active'
+      allow read: if resource.data.status == 'active' || resource.data.subscriptionStatus == 'active'
         || (signedIn() && resource.data.ownerId == request.auth.uid)
         || isPlatformAdmin();
       allow create: if signedIn()
@@ -40,7 +40,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'category', 'phone', 'address', 'city', 'country', 'description', 'coverURL', 'photoURL', 'openingHours', 'deliveryMode', 'updatedAt']));
 
       match /menuItems/{itemId} {
-        allow read: if get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.status == 'active' || isRestaurantOwner(restaurantId);
+        allow read: if get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.status == 'active' || get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.subscriptionStatus == 'active' || isRestaurantOwner(restaurantId);
         allow write: if isRestaurantOwner(restaurantId) || isPlatformAdmin();
       }
 
@@ -51,9 +51,13 @@ service cloud.firestore {
       }
     }
 
+    match /stories/{storyId} {
+      allow read: if resource.data.expiresAt > request.time && resource.data.status == 'active';
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == 'active' && request.resource.data.expiresAt > request.time && request.resource.data.expiresAt <= request.time + duration.value(1, 'd');
+      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
     match /posts/{postId} {
-      allow read: if resource.data.moderationStatus != 'removed'
-        && get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.status == 'active';
+      allow read: if resource.data.moderationStatus != 'removed';
       allow create: if signedIn() && isRestaurantOwner(request.resource.data.restaurantId);
       allow update, delete: if signedIn() && isRestaurantOwner(resource.data.restaurantId);
 

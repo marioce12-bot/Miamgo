@@ -150,6 +150,16 @@ export async function createRestaurant(ownerId, restaurant) {
   });
 }
 
+export async function getRestaurantMenu(restaurantId) {
+  const { collection, db, getDocs, orderBy, query } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "restaurants", restaurantId, "menuItems"), orderBy("createdAt", "desc")));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+}
+
+export async function addRestaurantMenuItem(restaurantId, item) {
+  const { addDoc, collection, db, serverTimestamp } = await firestore();
+  return addDoc(collection(db, "restaurants", restaurantId, "menuItems"), { ...item, available: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
 export async function updateRestaurantPlan(restaurantId, plan) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   await setDoc(doc(db, "restaurants", restaurantId), {
@@ -203,8 +213,20 @@ export async function getFeedData() {
     getDocs(query(collection(db, "restaurants"), where("status", "==", "active"), limit(30))).catch(() => ({ docs: [] })),
   ]);
   const posts = postSnapshot.docs.map((item) => { const data = item.data(); return { id: item.id, restaurant: data.restaurantName || data.restaurantId || "Restaurant", handle: data.handle || "", time: data.createdAt?.toDate?.()?.toLocaleDateString("fr-FR") || "", location: data.city || "", avatar: (data.restaurantName || "R").slice(0, 2).toUpperCase(), color: "#245d4c", text: data.text || "", image: data.mediaType === "image" ? data.mediaUrl : "", dish: data.dish || "", price: data.price ? `${data.price} FCFA` : "", likes: data.likeCount || 0, comments: data.commentCount || 0, promoted: false, restaurantId: data.restaurantId }; });
+  const stories = posts.filter((post) => post.image && post.createdAt?.toDate?.() && Date.now() - post.createdAt.toDate().getTime() < 86400000).map((post) => [post.id, post.restaurant, post.time, post.avatar, post.color, post.image]);
   const restaurants = restaurantSnapshot.docs.map((item) => { const data = item.data(); const name = data.name || item.id; return [name, String(data.rating || "-"), data.city || "Disponible", name.slice(0, 2).toUpperCase(), "#4a7558", data.photoURL || data.coverURL || ""]; });
-  return { posts, restaurants };
+  return { posts, restaurants, stories };
+}
+export async function createStory(ownerId, story) {
+  const { addDoc, collection, db, serverTimestamp, Timestamp } = await firestore();
+  const expiresAt = Timestamp.fromDate(new Date(Date.now() + 86400000));
+  return addDoc(collection(db, "stories"), { ...story, ownerId, status: "active", createdAt: serverTimestamp(), expiresAt, updatedAt: serverTimestamp() });
+}
+
+export async function getActiveStories() {
+  const { collection, db, getDocs, limit, orderBy, query, Timestamp, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "stories"), where("status", "==", "active"), where("expiresAt", ">", Timestamp.now()), orderBy("expiresAt", "asc"), limit(50)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 export async function createDriverApplication(userId, application) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
