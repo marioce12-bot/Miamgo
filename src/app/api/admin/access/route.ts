@@ -10,12 +10,12 @@ function createToken(secret: string) {
 }
 
 export async function POST(request: Request) {
-   const adminCode = String(process.env.ADMIN_ACCESS_CODE || process.env.MIAMGO_ADMIN_PASSWORD || "").trim();
-   const sessionSecret = String(process.env.ADMIN_SESSION_SECRET || process.env.MIAMGO_SESSION_SECRET || adminCode).trim();
+  const adminCode = process.env.ADMIN_ACCESS_CODE;
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
   const { code } = await request.json() as { code?: string };
-   if (!adminCode || !sessionSecret || !code) return NextResponse.json({ error: "Le code administrateur n’est pas configuré sur l’environnement Production." }, { status: 503 });
+  if (!adminCode || !sessionSecret || !code) return NextResponse.json({ error: "Configuration manquante" }, { status: 503 });
   const expected = Buffer.from(adminCode);
-   const provided = Buffer.from(String(code).trim());
+  const provided = Buffer.from(code);
   if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) return NextResponse.json({ error: "Accès refusé" }, { status: 401 });
   const response = NextResponse.json({ ok: true });
   response.cookies.set(cookieName, createToken(sessionSecret), { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 12, path: "/admin" });

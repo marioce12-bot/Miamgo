@@ -4,7 +4,7 @@ import { AdminCodeForm } from "@/components/admin-code-form";
 import { DashboardShell } from "@/components/dashboard-shell";
 
 function hasValidAccess(token: string | undefined) {
-   const secret = process.env.ADMIN_SESSION_SECRET || process.env.MIAMGO_SESSION_SECRET || process.env.MIAMGO_ADMIN_PASSWORD;
+  const secret = process.env.ADMIN_SESSION_SECRET;
   if (!token || !secret) return false;
   const [expiresAt, signature] = token.split(".");
   if (!expiresAt || !signature || Number(expiresAt) < Date.now()) return false;
