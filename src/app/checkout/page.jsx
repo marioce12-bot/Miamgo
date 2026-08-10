@@ -11,6 +11,7 @@ import FedaPayCheckout from "../../components/FedaPayCheckout";
 import MiamgoQr from "../../components/MiamgoQr";
 import { auth } from "../../lib/firebase";
 import { createOrder, ensureCustomerProfile } from "../../lib/firestore";
+import { extractFedaPayTransactionId } from "../../lib/fedapay";
 
 const fallbackItems = [];
 
@@ -65,7 +66,7 @@ export default function CheckoutPage() {
       const token = await user.getIdToken();
       const response = await fetch("/api/fedapay/create-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId: created.id }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.error || "Création de la transaction impossible.");
-      setTransactionId(String(payload.transaction?.id || payload.transaction?.data?.id));
+      setTransactionId(String(extractFedaPayTransactionId(payload)));
       setPayableAmount(Number(payload.breakdown?.total || foodSubtotal + deliveryFee));
       setTimeout(() => paymentRef.current?.open().catch((error) => { setPaymentLoading(false); setStatus(error.message); }), 50);
     } catch (error) { setPaymentLoading(false); setStatus(error.message || "Impossible de lancer le paiement."); }

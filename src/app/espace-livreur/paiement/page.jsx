@@ -9,6 +9,7 @@ import FedaPayCheckout from "../../../components/FedaPayCheckout";
 import PayoutSettings from "../../../components/PayoutSettings";
 import { auth } from "../../../lib/firebase";
 import { subscribeUserProfile } from "../../../lib/firestore";
+import { extractFedaPayTransactionId } from "../../../lib/fedapay";
 
 const plan = { name: "Abonnement livreur", amount: 3000, detail: "Accès aux demandes de courses Miamgo pendant 30 jours." };
 
@@ -31,7 +32,7 @@ export default function DriverPayment() {
       const response = await fetch("/api/fedapay/create-driver-subscription", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error);
-      setTransactionId(String(payload.transaction?.id || payload.transaction?.data?.id));
+      setTransactionId(String(extractFedaPayTransactionId(payload)));
       setTimeout(() => paymentRef.current?.open().catch((error) => setStatus(error.message)), 50);
     } catch (error) { setStatus(error.message || "Impossible de lancer le paiement."); }
   }

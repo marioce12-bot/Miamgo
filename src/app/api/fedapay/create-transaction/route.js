@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb } from "../../../../lib/firebaseAdmin";
 import { getAdminAuth } from "../../../../lib/firebaseAdmin";
 import { splitOrderAmount } from "../../../../lib/orderFees";
+import { extractFedaPayTransactionId } from "../../../../lib/fedapay";
 
 export async function POST(request) {
   const secret = process.env.FEDAPAY_SECRET_KEY;
@@ -31,7 +32,7 @@ export async function POST(request) {
   const response = await fetch(`${baseUrl}/transactions`, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ description: `Commande Miamgo ${input.orderId}`, amount: breakdown.total, currency: { iso: "XOF" }, customer: { email: decoded.email || undefined }, callback_url: `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/api/fedapay/webhook`, custom_metadata: { orderId: input.orderId, breakdown } }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) return NextResponse.json({ error: payload?.message || payload?.error || "FedaPay a refusé la transaction.", details: payload?.errors || payload?.data || null }, { status: 502 });
-  const transactionId = payload.id || payload.data?.id;
+  const transactionId = extractFedaPayTransactionId(payload);
   if (!transactionId) return NextResponse.json({ error: "FedaPay n’a pas retourné d’identifiant de transaction." }, { status: 502 });
   await orderRef.set({ paymentStatus: "pending", paymentTransactionId: String(transactionId), financials: breakdown, total: breakdown.total, updatedAt: new Date() }, { merge: true });
   return NextResponse.json({ transaction: payload, breakdown });

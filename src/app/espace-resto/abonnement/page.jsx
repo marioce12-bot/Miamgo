@@ -8,6 +8,7 @@ import FedaPayCheckout from "../../../components/FedaPayCheckout";
 import { auth } from "../../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getOwnedRestaurant } from "../../../lib/firestore";
+import { extractFedaPayTransactionId } from "../../../lib/fedapay";
 
 const plans = [
   ["Basique", 2500, ["Boutique en ligne", "Menu et commandes"]],
@@ -61,7 +62,7 @@ export default function SubscriptionPage() {
       const response = await fetch("/api/fedapay/create-subscription", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId: restaurant.id, plan: planName }) });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) { const details = typeof payload.details === "string" ? payload.details : payload.details ? JSON.stringify(payload.details) : ""; throw new Error([payload.error, details].filter(Boolean).join(" ") || `FedaPay a refusé la transaction (${response.status}).`); }
-      const nextTransactionId = payload.transaction?.id || payload.transaction?.data?.id;
+      const nextTransactionId = extractFedaPayTransactionId(payload);
       if (!nextTransactionId) throw new Error("FedaPay n’a pas retourné d’identifiant de transaction.");
       setTransactionId(String(nextTransactionId));
       setTimeout(() => paymentRef.current?.open().catch((error) => setStatus(error.message)), 50);

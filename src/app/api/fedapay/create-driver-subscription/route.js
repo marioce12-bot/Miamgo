@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
+import { extractFedaPayTransactionId } from "../../../../lib/fedapay";
 
 const DRIVER_PLAN = "Livreur Miamgo";
 const DRIVER_PRICE = 3000;
@@ -20,7 +21,8 @@ export async function POST(request) {
     const response = await fetch(`${baseUrl}/transactions`, { method: "POST", headers: { Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ description: `Abonnement ${DRIVER_PLAN}`, amount: DRIVER_PRICE, currency: { iso: "XOF" }, custom_metadata: { type: "driver_subscription", driverId: decoded.uid, plan: DRIVER_PLAN, amount: DRIVER_PRICE } }) });
     const payload = await response.json();
     if (!response.ok) return NextResponse.json({ error: payload?.message || "FedaPay a refusé l’abonnement livreur." }, { status: 502 });
-    const transactionId = String(payload.id || payload.data?.id);
+    const transactionId = String(extractFedaPayTransactionId(payload) || "");
+    if (!transactionId) return NextResponse.json({ error: "Transaction FedaPay sans identifiant.", details: payload }, { status: 502 });
     await userRef.set({ subscriptionStatus: "payment_pending", subscriptionTransactionId: transactionId, subscriptionPlan: DRIVER_PLAN, subscriptionAmount: DRIVER_PRICE, updatedAt: new Date() }, { merge: true });
     return NextResponse.json({ transaction: payload, amount: DRIVER_PRICE, plan: DRIVER_PLAN });
   } catch (error) { return NextResponse.json({ error: error.message || "Impossible de créer l’abonnement livreur." }, { status: 500 }); }

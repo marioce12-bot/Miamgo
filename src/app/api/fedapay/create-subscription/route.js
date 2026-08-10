@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "../../../../lib/firebaseAdmin";
+import { extractFedaPayTransactionId } from "../../../../lib/fedapay";
 
 const prices = { Basique: 2500, Pro: 5000, "Premium IA": 12000 };
 export const runtime = "nodejs";
@@ -31,7 +32,7 @@ export async function POST(request) {
      console.error("FedaPay subscription transaction rejected", { status: response.status, plan, amount: transactionAmount, errors });
      return NextResponse.json({ error: payload?.message || payload?.error || `FedaPay a refusé l'abonnement (${response.status}).`, details: errors }, { status: 502 });
    }
-   const transactionId = payload.id || payload.data?.id;
+   const transactionId = extractFedaPayTransactionId(payload);
    if (!transactionId) return NextResponse.json({ error: "FedaPay n’a pas retourné d’identifiant de transaction.", details: payload }, { status: 502 });
    await restaurantRef.set({ plan, subscriptionStatus: "payment_pending", subscriptionTransactionId: String(transactionId), updatedAt: new Date() }, { merge: true });
   return NextResponse.json({ transaction: payload, amount: prices[plan] });
