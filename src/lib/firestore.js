@@ -88,6 +88,7 @@ export async function createRestaurantPost(ownerId, restaurantId, post) {
     restaurantId,
     likeCount: 0,
     commentCount: 0,
+    moderationStatus: "published",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

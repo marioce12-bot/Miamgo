@@ -57,7 +57,7 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
     match /posts/{postId} {
-      allow read: if resource.data.moderationStatus != 'removed';
+      allow read: if !resource.data.keys().hasAny(['moderationStatus']) || resource.data.moderationStatus != 'removed';
       allow create: if signedIn() && isRestaurantOwner(request.resource.data.restaurantId);
       allow update, delete: if signedIn() && isRestaurantOwner(resource.data.restaurantId);
 
