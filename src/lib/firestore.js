@@ -94,6 +94,28 @@ export async function createRestaurantPost(ownerId, restaurantId, post) {
   });
 }
 
+export async function getRestaurantPosts(restaurantId) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "posts"), where("restaurantId", "==", restaurantId), limit(50)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+}
+
+export async function updateRestaurantPost(postId, changes) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "posts", String(postId)), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function deleteRestaurantPost(postId) {
+  const { db, deleteDoc, doc } = await firestore();
+  await deleteDoc(doc(db, "posts", String(postId)));
+}
+
+export async function getPostEngagement(postId, userId) {
+  const { collection, db, doc, getDoc, getDocs } = await firestore();
+  const likes = await getDocs(collection(db, "posts", String(postId), "likes"));
+  const ownLike = userId ? await getDoc(doc(db, "posts", String(postId), "likes", userId)) : null;
+  return { count: likes.size, liked: Boolean(ownLike?.exists?.()) };
+}
 export async function setPostLike(userId, postId, isLiked) {
   const { db, deleteDoc, doc, serverTimestamp, setDoc } = await firestore();
   const likeRef = doc(db, "posts", String(postId), "likes", userId);

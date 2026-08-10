@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, addRestaurantReply, createStory, ensureCustomerProfile, getActiveStories, getFeedData, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, createStory, ensureCustomerProfile, getActiveStories, getFeedData, getPostEngagement, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
 import { shareFood } from "../lib/share";
 import { usePreferences } from "./PreferencesProvider";
 
@@ -61,6 +61,8 @@ export default function MiamgoFeed() {
   const [roleReady, setRoleReady] = useState(false);
 
   useEffect(() => { Promise.all([getFeedData().catch((error) => { setFeedError("Impossible de charger les publications. Vérifiez votre connexion puis réessayez."); return { posts: [], restaurants: [] }; }), getActiveStories().catch(() => [])]).then(([result, activeStories]) => { setPosts(result.posts); setRestaurants(result.restaurants); setStories(activeStories); }); }, []);
+
+  useEffect(() => { if (!user || !posts.length) return; Promise.all(posts.map(async (post) => [post.id, await getPostEngagement(post.id, user.uid).catch(() => ({ count: post.likes || 0, liked: false }))])).then((entries) => { const engagement = new Map(entries); setPosts((current) => current.map((post) => ({ ...post, likes: engagement.get(post.id)?.count ?? post.likes }))); setLiked(entries.filter(([, value]) => value.liked).map(([id]) => id)); }); }, [user, posts.length]);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
@@ -154,7 +156,7 @@ export default function MiamgoFeed() {
 
   function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
-  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadImageFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); const activeStories = await getActiveStories(); setStories(activeStories); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
+  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadMediaFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); const activeStories = await getActiveStories(); setStories(activeStories); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
 
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
 
