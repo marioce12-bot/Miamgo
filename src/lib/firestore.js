@@ -61,6 +61,10 @@ export function explainFirestoreError(error) {
   return `Impossible d'enregistrer les données Firestore${error?.code ? ` (${error.code})` : ""}.`;
 }
 
+export async function subscribeUserProfile(userId, callback) {
+  const { db, doc, onSnapshot } = await firestore();
+  return onSnapshot(doc(db, "users", userId), (snapshot) => callback(snapshot.exists() ? snapshot.data() : null));
+}
 export async function updateProfileSettings(userId, changes) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   await setDoc(doc(db, "users", userId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
