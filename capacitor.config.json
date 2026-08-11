@@ -1,0 +1,18 @@
+{
+    "appId":  "com.miamgo.app",
+    "appName":  "Miamgo",
+    "webDir":  "out",
+    "server":  {
+                   "url":  "https://miam-go.vercel.app",
+                   "cleartext":  false
+               },
+    "plugins":  {
+                    "PushNotifications":  {
+                                              "presentationOptions":  [
+                                                                          "badge",
+                                                                          "sound",
+                                                                          "alert"
+                                                                      ]
+                                          }
+                }
+}

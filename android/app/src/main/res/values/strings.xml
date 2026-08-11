@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Miamgo</string>
+    <string name="title_activity_main">Miamgo</string>
+    <string name="package_name">com.miamgo.app</string>
+    <string name="custom_url_scheme">com.miamgo.app</string>
+</resources>

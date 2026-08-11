@@ -1,9 +1,9 @@
-import { realtimeDb } from "./firebase";
+import { realtimeDb } from "./firebase";\nimport { Capacitor, registerPlugin } from "@capacitor/core";\nconst BackgroundGeolocation = registerPlugin("BackgroundGeolocation");
 import { onValue, ref, remove, serverTimestamp, set } from "firebase/database";
 
 const locationRef = (orderId, driverId) => ref(realtimeDb, `deliveryLocations/${orderId}/${driverId}`);
 
-export function startDriverLocationTracking(orderId, driverId, intervalMs = 7000) {
+export async function startDriverLocationTracking(orderId, driverId, intervalMs = 7000) {\n  if (Capacitor.isNativePlatform()) {\n    const watcherId = await BackgroundGeolocation.addWatcher({ backgroundMessage: "Miamgo suit votre livraison en cours.", backgroundTitle: "Livraison Miamgo", requestPermissions: true, stale: false, distanceFilter: 10 }, async (location, error) => { if (error || !location) return; await set(locationRef(orderId, driverId), { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy || null, tracking: true, updatedAt: serverTimestamp() }); });\n    return () => BackgroundGeolocation.removeWatcher({ id: watcherId }).then(() => remove(locationRef(orderId, driverId)));\n  }
   let stopped = false;
   const publish = () => navigator.geolocation.getCurrentPosition(async (position) => {
     if (stopped) return;
