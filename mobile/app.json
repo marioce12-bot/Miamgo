@@ -19,11 +19,14 @@
           "icon": "./assets/icon.png",
           "color": "#ef6a38"
         }
-      ]
-      , [
+      ],
+      [
         "expo-location",
-        { "locationAlwaysAndWhenInUsePermission": "Miamgo utilise votre position pendant une livraison active." }
-      ]
+        {
+          "locationAlwaysAndWhenInUsePermission": "Miamgo utilise votre position pendant une livraison active."
+        }
+      ],
+      "expo-video"
     ],
     "userInterfaceStyle": "light",
     "ios": {
