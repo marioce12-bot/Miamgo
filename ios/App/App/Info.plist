@@ -39,10 +39,34 @@
             <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
             <key>UISceneStoryboardFile</key>
             <string>Main</string>
-        </dict>
+            <key>NSCameraUsageDescription</key>
+    <string>Miamgo utilise la caméra pour scanner les QR codes.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active, même en arrière-plan.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string><string>remote-notification</string></array>
+</dict>
       </array>
-    </dict>
-	</dict>
+        <key>NSCameraUsageDescription</key>
+    <string>Miamgo utilise la caméra pour scanner les QR codes.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active, même en arrière-plan.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string><string>remote-notification</string></array>
+</dict>
+	    <key>NSCameraUsageDescription</key>
+    <string>Miamgo utilise la caméra pour scanner les QR codes.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active, même en arrière-plan.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string><string>remote-notification</string></array>
+</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -66,5 +90,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Miamgo utilise la caméra pour scanner les QR codes.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Miamgo utilise votre position pendant une livraison active, même en arrière-plan.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string><string>remote-notification</string></array>
 </dict>
 </plist>
