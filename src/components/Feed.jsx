@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Settings,
@@ -52,6 +52,10 @@ function StoryViewer({ stories, index, user, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageErrors, setImageErrors] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [postCursor, setPostCursor] = useState(null);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const loadMoreRef = useRef(null);
   const [restaurants, setRestaurants] = useState([]);
   const [stories, setStories] = useState([]);
   const [feedError, setFeedError] = useState("");
@@ -59,7 +63,9 @@ function StoryViewer({ stories, index, user, onClose }) {
   const [role, setRole] = useState("client");
   const [roleReady, setRoleReady] = useState(false);
 
-  useEffect(() => { Promise.all([getFeedData().catch((error) => { setFeedError("Impossible de charger les publications. Vérifiez votre connexion puis réessayez."); return { posts: [], restaurants: [] }; }), getActiveStories().catch(() => [])]).then(([result, activeStories]) => { setPosts(result.posts); setRestaurants(result.restaurants); setStories(activeStories); }); }, []);
+  useEffect(() => { Promise.all([getFeedData(10).catch((error) => { setFeedError("Impossible de charger les publications. Vérifiez votre connexion puis réessayez."); return { posts: [], restaurants: [], nextCursor: null, hasMore: false }; }), getActiveStories().catch(() => [])]).then(([result, activeStories]) => { setPosts(result.posts); setPostCursor(result.nextCursor); setHasMorePosts(result.hasMore); setRestaurants(result.restaurants); setStories(activeStories); }); }, []);
+
+  useEffect(() => { const target = loadMoreRef.current; if (!target || !hasMorePosts || loadingMorePosts) return undefined; const observer = new IntersectionObserver(async (entries) => { if (!entries[0].isIntersecting || !postCursor) return; setLoadingMorePosts(true); const result = await getFeedData(10, postCursor).catch(() => ({ posts: [], nextCursor: null, hasMore: false })); setPosts((current) => [...current, ...result.posts]); setPostCursor(result.nextCursor); setHasMorePosts(result.hasMore); setLoadingMorePosts(false); }); observer.observe(target); return () => observer.disconnect(); }, [postCursor, hasMorePosts, loadingMorePosts]);
 
   useEffect(() => { if (!user || !posts.length) return; Promise.all(posts.map(async (post) => [post.id, await getPostEngagement(post.id, user.uid).catch(() => ({ count: post.likes || 0, liked: false }))])).then((entries) => { const engagement = new Map(entries); setPosts((current) => current.map((post) => ({ ...post, likes: engagement.get(post.id)?.count ?? post.likes }))); setLiked(entries.filter(([, value]) => value.liked).map(([id]) => id)); }); }, [user, posts.length]);
 
@@ -155,7 +161,7 @@ function StoryViewer({ stories, index, user, onClose }) {
 
   function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
-  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadMediaFile(file); await createStory(auth.currentUser.uid, { authorName: auth.currentUser.email?.split("@")[0] || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); setStories(await getActiveStories()); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
+  async function publishStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; try { const media = await (await import("../lib/storage")).uploadMediaFile(file); const authorProfile = await getUserProfile(auth.currentUser.uid).catch(() => null); await createStory(auth.currentUser.uid, { authorName: authorProfile?.displayName || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); setStories(await getActiveStories()); } catch (error) { console.error(error); } finally { event.target.value = ""; } }
   async function removeStory(storyIds) { if (!window.confirm("Supprimer cette story ?")) return; await Promise.all(storyIds.map((id) => deleteStory(id))); setStories((current) => current.filter((story) => !storyIds.includes(story.id))); }
 
   const storyGroups = Object.values(stories.reduce((groups, story) => { const key = story.ownerId || story.authorName || story.id; (groups[key] ||= []).push(story); return groups; }, {})).sort((a, b) => { const ownA = user && a[0].ownerId === user.uid ? 1 : 0; const ownB = user && b[0].ownerId === user.uid ? 1 : 0; return ownB - ownA; });
@@ -214,10 +220,10 @@ function StoryViewer({ stories, index, user, onClose }) {
               </div>
               {commenting === post.id && <form className="comment-form" onSubmit={(event) => submitComment(event, post.id)}><input name="comment" autoFocus placeholder="Écrivez un commentaire..." /><button aria-label="Envoyer"><Send size={17} /></button></form>}
               {postComments.map((comment) => <div className="comment-thread" key={comment.id}><p className="comment"><b>{comment.author}</b>{comment.text}</p>{role === "restaurant_owner" && post.restaurantId === "chez-aicha" && <form className="reply-form" onSubmit={(event) => submitReply(event, post.id, comment.id)}><input name="reply" placeholder="Répondre au client..." /><button>Répondre</button></form>}{replies[comment.id] && <p className="restaurant-reply"><b>Réponse du restaurant</b>{replies[comment.id]}</p>}</div>)}
-              <div className="order-row"><div><span>Plat du jour</span><strong>{post.price}</strong></div><button onClick={() => requireAuth(() => addToCart(post))}><Plus size={18} />Ajouter au panier</button><button className="order-now" onClick={() => requireAuth(() => { addToCart(post); router.push("/checkout"); })}>Commander</button></div>
+              <div className="order-row"><div><span>Publication restaurant</span><strong>{post.price}</strong></div><button className="order-now" onClick={() => router.push(`/restaurant/${post.restaurantId || ""}`)}>Visiter le restaurant</button></div>
             </article>;
           })}
-          {visiblePosts.length === 0 && <div className="empty-state"><UtensilsCrossed size={34} /><h2>Aucun plat trouvé</h2><p>Essayez un autre mot-clé.</p></div>}
+          {visiblePosts.length === 0 && <div className="empty-state"><UtensilsCrossed size={34} /><h2>Aucun plat trouvé</h2><p>Essayez un autre mot-clé.</p></div>}{hasMorePosts && <div ref={loadMoreRef} className="feed-load-sentinel">{loadingMorePosts ? "Chargement..." : ""}</div>}
         </section>
 
         {role !== "restaurant_owner" && <aside className="right-sidebar" id="restaurants">

@@ -20,3 +20,5 @@
   .landing-page > .account-carousel .carousel-track { height:420px; }
   .landing-page > .landing-experience-sections,.landing-page > .landing-footer { width:auto; }
 }
+
+@media (max-width:720px) { .landing-page { background-image:none!important; background-color:var(--paper)!important; } }
