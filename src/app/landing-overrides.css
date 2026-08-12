@@ -22,3 +22,5 @@
 }
 
 @media (max-width:720px) { .landing-page { background-image:none!important; background-color:var(--paper)!important; } }
+
+@media (max-width:720px) { .landing-page .landing-glass { background:rgba(17,54,40,.9); backdrop-filter:none; } }
