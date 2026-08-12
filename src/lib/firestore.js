@@ -108,6 +108,16 @@ export async function addRestaurantReview(restaurantId, userId, review) {
   const { addDoc, collection, db, serverTimestamp } = await firestore();
   return addDoc(collection(db, "restaurants", restaurantId, "reviews"), { ...review, userId, createdAt: serverTimestamp() });
 }
+export async function getExplorerItems() {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const [active, subscribed] = await Promise.all([
+    getDocs(query(collection(db, "restaurants"), where("status", "==", "active"), limit(30))).catch(() => ({ docs: [] })),
+    getDocs(query(collection(db, "restaurants"), where("subscriptionStatus", "==", "active"), limit(30))).catch(() => ({ docs: [] })),
+  ]);
+  const restaurants = Array.from(new Map([...active.docs, ...subscribed.docs].map((item) => [item.id, item])).values());
+  const items = (await Promise.all(restaurants.map(async (restaurantDoc) => { const restaurant = restaurantDoc.data(); const menu = await getRestaurantMenu(restaurantDoc.id).catch(() => []); return menu.map((item) => ({ ...item, restaurantId: restaurantDoc.id, restaurantName: restaurant.name || restaurantDoc.id, restaurantSlug: restaurant.slug || restaurantDoc.id, restaurantPhoto: restaurant.photoURL || restaurant.coverURL || "", city: restaurant.city || "" })); }))).flat();
+  return items;
+}
 export async function getRestaurantBySlug(slug) {
   const { collection, db, doc, getDoc, getDocs, limit, query, where } = await firestore();
   const direct = await getDoc(doc(db, "restaurants", slug));
@@ -263,7 +273,8 @@ export async function getActiveRestaurantDeliveries(restaurantId) {
 export async function getFeedData(pageSize = 10, cursor = null) {
   const { collection, db, getDocs, limit, orderBy, query, startAfter, where } = await firestore();
   const postQuery = cursor ? query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(cursor), limit(pageSize)) : query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(pageSize));
-  const [postSnapshot, restaurantSnapshot] = await Promise.all([getDocs(postQuery).catch((error) => { console.error("Feed posts read failed", error); return { docs: [] }; }), getDocs(query(collection(db, "restaurants"), where("status", "==", "active"), limit(20))).catch(() => ({ docs: [] }))]);
+  const [postSnapshot, activeRestaurants, subscribedRestaurants] = await Promise.all([getDocs(postQuery).catch((error) => { console.error("Feed posts read failed", error); return { docs: [] }; }), getDocs(query(collection(db, "restaurants"), where("status", "==", "active"), limit(20))).catch(() => ({ docs: [] })), getDocs(query(collection(db, "restaurants"), where("subscriptionStatus", "==", "active"), limit(20))).catch(() => ({ docs: [] }))]);
+  const restaurantSnapshot = { docs: Array.from(new Map([...activeRestaurants.docs, ...subscribedRestaurants.docs].map((item) => [item.id, item])).values()) };
   const restaurantById = new Map(restaurantSnapshot.docs.map((item) => [item.id, item.data()]));
   const posts = postSnapshot.docs.map((item) => { const data = item.data(); const restaurant = restaurantById.get(data.restaurantId) || {}; return { id: item.id, restaurant: data.restaurantName || restaurant.name || data.restaurantId || "Restaurant", handle: data.handle || "", time: data.createdAt?.toDate?.()?.toLocaleDateString("fr-FR") || "", location: data.city || restaurant.city || "", avatar: (data.restaurantName || restaurant.name || "R").slice(0, 2).toUpperCase(), avatarImage: restaurant.photoURL || restaurant.coverURL || "", color: "#245d4c", text: data.text || "", dish: data.dish || "", price: data.price ? `${data.price} FCFA` : "", mediaUrl: data.mediaUrl || "", mediaType: data.mediaType || "image", image: data.mediaType === "image" ? data.mediaUrl : "", likes: data.likeCount || 0, comments: data.commentCount || 0, promoted: false, restaurantId: data.restaurantId }; });
   const restaurants = restaurantSnapshot.docs.map((item) => { const data = item.data(); const name = data.name || item.id; return [name, String(data.rating || "-"), data.city || "Disponible", name.slice(0, 2).toUpperCase(), "#4a7558", data.photoURL || data.coverURL || ""]; });
