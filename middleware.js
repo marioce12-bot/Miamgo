@@ -3,7 +3,7 @@ import { jwtVerify } from "jose";
 
 export async function middleware(request) {
   const path = request.nextUrl.pathname;
-  if (path.startsWith("/admin")) {
+  if (path.startsWith("/admin") && path !== "/admin") {
     if (!request.cookies.get("miamgo_admin")?.value) return NextResponse.redirect(new URL("/admin", request.url));
     return NextResponse.next();
   }
