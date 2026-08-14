@@ -25,4 +25,10 @@ export async function uploadMediaFile(file) {
 }
 
 export async function uploadImageFile(file, options = {}) { const result = await uploadMediaFile(file, options); return result.url; }
+export async function uploadImageAsset(file) { return uploadMediaFile(file); }
+export async function deleteMediaAsset({ restaurantId, menuItemId, publicId, resourceType = "image" }) {
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  const response = await fetch("/api/delete-menu-media", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ restaurantId, menuItemId, publicId, resourceType }) });
+  if (!response.ok) throw new Error((await response.json()).error || "delete-media-failed");
+}
 import { auth } from "./firebase";

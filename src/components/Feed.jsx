@@ -12,6 +12,7 @@ import {
   MapPin,
   Menu,
   MessageCircle,
+  MoreVertical,
   Plus,
   Search,
   Send,
@@ -24,7 +25,8 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { addCartItem, addComment, addRestaurantReply, createStory, deleteStory, ensureCustomerProfile, getActiveStories, getStoryViewCount, recordStoryView, getFeedData, getPostEngagement, getUserProfile, saveFavorite, setPostLike } from "../lib/firestore";
+import { addCartItem, addComment, addRestaurantReply, createStory, deleteStory, ensureCustomerProfile, getActiveStories, getStoryViewCount, recordStoryView, getFeedData, getUserProfile, saveFavorite } from "../lib/firestore";
+import { setRealtimePostLike, subscribePostLikes } from "../lib/realtimeLikes";
 import { shareFood } from "../lib/share";
 import { usePreferences } from "./PreferencesProvider";
 
@@ -63,6 +65,8 @@ function StoryViewer({ stories, index, user, onClose }) {
   const [storyViewer, setStoryViewer] = useState(null);
   const [storyDraft, setStoryDraft] = useState(null);
   const [storyPublishing, setStoryPublishing] = useState(false);
+  const [pendingStory, setPendingStory] = useState(null);
+  const [storyMenu, setStoryMenu] = useState(null);
   const [role, setRole] = useState("client");
   const [roleReady, setRoleReady] = useState(false);
 
@@ -70,7 +74,8 @@ function StoryViewer({ stories, index, user, onClose }) {
 
   useEffect(() => { const target = loadMoreRef.current; if (!target || !hasMorePosts || loadingMorePosts) return undefined; const observer = new IntersectionObserver(async (entries) => { if (!entries[0].isIntersecting || !postCursor) return; setLoadingMorePosts(true); const result = await getFeedData(10, postCursor).catch(() => ({ posts: [], nextCursor: null, hasMore: false })); setPosts((current) => [...current, ...result.posts]); setPostCursor(result.nextCursor); setHasMorePosts(result.hasMore); setLoadingMorePosts(false); }); observer.observe(target); return () => observer.disconnect(); }, [postCursor, hasMorePosts, loadingMorePosts]);
 
-  useEffect(() => { if (!user || !posts.length) return; Promise.all(posts.map(async (post) => [post.id, await getPostEngagement(post.id, user.uid).catch(() => ({ count: post.likes || 0, liked: false }))])).then((entries) => { const engagement = new Map(entries); setPosts((current) => current.map((post) => ({ ...post, likes: engagement.get(post.id)?.count ?? post.likes }))); setLiked(entries.filter(([, value]) => value.liked).map(([id]) => id)); }); }, [user, posts.length]);
+  const postIds = posts.map((post) => post.id).join("|");
+  useEffect(() => { if (!user || !postIds) return undefined; const unsubscribers = posts.map((post) => subscribePostLikes(post.id, user.uid, (engagement) => { setPosts((current) => current.map((item) => item.id === post.id ? { ...item, likes: engagement.count } : item)); setLiked((current) => engagement.liked ? (current.includes(post.id) ? current : [...current, post.id]) : current.filter((id) => id !== post.id)); })); return () => unsubscribers.forEach((unsubscribe) => unsubscribe()); }, [user, postIds]);
 
   useEffect(() => onAuthStateChanged(auth, async (session) => {
     setUser(session);
@@ -129,7 +134,8 @@ function StoryViewer({ stories, index, user, onClose }) {
     if (!currentUser) return;
     const isLiked = !liked.includes(id);
     setLiked((current) => isLiked ? [...current, id] : current.filter((item) => item !== id));
-    setPostLike(currentUser.uid, id, isLiked).catch(console.error);
+    setPosts((current) => current.map((post) => post.id === id ? { ...post, likes: Math.max(0, Number(post.likes || 0) + (isLiked ? 1 : -1)) } : post));
+    setRealtimePostLike(id, currentUser.uid, isLiked).catch(() => { setLiked((current) => isLiked ? current.filter((item) => item !== id) : [...current, id]); });
   }
 
   function toggleSave(id) {
@@ -164,10 +170,11 @@ function StoryViewer({ stories, index, user, onClose }) {
 
   function submitReply(event, postId, commentId) { event.preventDefault(); const currentUser = auth.currentUser; const text = new FormData(event.currentTarget).get("reply")?.trim(); if (!text || !currentUser) return; setReplies((current) => ({ ...current, [commentId]: text })); addRestaurantReply(currentUser.uid, postId, commentId, text).catch(console.error); event.currentTarget.reset(); }
 
-  function chooseStory(event) { const file = event.target.files?.[0]; if (!file || !auth.currentUser) return; setStoryDraft({ file, preview: URL.createObjectURL(file), mediaType: file.type.startsWith("video/") ? "video" : "image" }); event.target.value = ""; }
+  function chooseStory(event) { const file = event.target.files?.[0]; if (!auth.currentUser) { setPendingAction(() => () => document.querySelector(".story-create-card input")?.click()); setShowLogin(true); event.target.value = ""; return; } if (!file) return; setStoryDraft({ file, preview: URL.createObjectURL(file), mediaType: file.type.startsWith("video/") ? "video" : "image" }); event.target.value = ""; }
   function replaceStory() { if (storyPublishing) return; if (storyDraft?.preview) URL.revokeObjectURL(storyDraft.preview); setStoryDraft(null); window.setTimeout(() => document.querySelector(".story-create-card input")?.click(), 0); }
-  async function publishStory() { if (!storyDraft?.file || !auth.currentUser || storyPublishing) return; setStoryPublishing(true); try { const media = await (await import("../lib/storage")).uploadMediaFile(storyDraft.file); const authorProfile = await getUserProfile(auth.currentUser.uid).catch(() => null); await createStory(auth.currentUser.uid, { authorName: authorProfile?.displayName || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); setStories(await getActiveStories()); URL.revokeObjectURL(storyDraft.preview); setStoryDraft(null); } catch (error) { console.error(error); } finally { setStoryPublishing(false); } }
+  async function publishStory() { if (!storyDraft?.file || !auth.currentUser || storyPublishing) return; const draft = storyDraft; const authorProfile = await getUserProfile(auth.currentUser.uid).catch(() => null); setStoryDraft(null); setPendingStory({ preview: draft.preview, mediaType: draft.mediaType, authorName: authorProfile?.displayName || "Utilisateur" }); setStoryPublishing(true); try { const media = await (await import("../lib/storage")).uploadMediaFile(draft.file); await createStory(auth.currentUser.uid, { authorName: authorProfile?.displayName || "Utilisateur", mediaUrl: media.url, mediaType: media.mediaType }); setStories(await getActiveStories()); URL.revokeObjectURL(draft.preview); setPendingStory(null); } catch (error) { console.error(error); URL.revokeObjectURL(draft.preview); setPendingStory(null); setFeedError("La publication de la story a échoué. Réessayez."); } finally { setStoryPublishing(false); } }
   async function removeStory(storyIds) { if (!window.confirm("Supprimer cette story ?")) return; await Promise.all(storyIds.map((id) => deleteStory(id))); setStories((current) => current.filter((story) => !storyIds.includes(story.id))); }
+  function toggleStoryMenu(event, ownerId) { event.stopPropagation(); setStoryMenu((current) => current === ownerId ? null : ownerId); }
 
   const storyGroups = Object.values(stories.reduce((groups, story) => { const key = story.ownerId || story.authorName || story.id; (groups[key] ||= []).push(story); return groups; }, {})).sort((a, b) => { const ownA = user && a[0].ownerId === user.uid ? 1 : 0; const ownB = user && b[0].ownerId === user.uid ? 1 : 0; return ownB - ownA; });
   const visiblePosts = posts.filter((post) => `${post.restaurant} ${post.dish} ${post.text}`.toLowerCase().includes(search.toLowerCase()));
@@ -198,7 +205,7 @@ function StoryViewer({ stories, index, user, onClose }) {
         <section className="feed" id="feed">
           <div className="feed-intro"><div><p className="eyebrow">{role === "restaurant_owner" ? t("feed") : t("nearby")}</p><h1>{role === "restaurant_owner" ? t("feed") : t("craving")}</h1></div>{role !== "restaurant_owner" && <button className="filter-button" onClick={() => document.querySelector(".search-box input")?.focus()}><Menu size={18} /> {t("filter")}</button>}</div>
           {feedError && <p className="settings-notice">{feedError}</p>}<div className="restaurant-stories">
-            <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onChange={chooseStory} /><span className="story-add-icon">+</span><div><strong>Publier</strong><small>Ajouter une story</small></div></label>{storyGroups.map((group, groupIndex) => <div className="story-group" key={group[0].ownerId || group[0].id}><button className="restaurant-story" onClick={() => setStoryViewer({ group: groupIndex, index: 0 })}>{group[0].mediaType === "video" ? <video src={group[0].mediaUrl} muted playsInline preload="metadata"/> : <img src={group[0].mediaUrl} alt={`Story de ${group[0].authorName || "Utilisateur"}`}/>}<span className="story-shade"/><b style={{ backgroundColor: "#245d4c" }}>{(group[0].authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{group[0].authorName || "Utilisateur"}</strong><small>{group.length} story{group.length === 1 ? "" : "s"} · {group[0].createdAt?.toDate?.()?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) || ""}</small></div></button>{user?.uid === group[0].ownerId && <button className="story-delete-button" onClick={() => removeStory(group.map((story) => story.id))} aria-label="Supprimer mes stories">×</button>}</div>)}
+            <label className="restaurant-story story-create-card"><input type="file" accept="image/*,video/*" onClick={(event) => { if (!auth.currentUser) { event.preventDefault(); setPendingAction(() => () => document.querySelector(".story-create-card input")?.click()); setShowLogin(true); } }} onChange={chooseStory} /><span className="story-add-icon">+</span><div><strong>Publier</strong><small>Ajouter une story</small></div></label>{pendingStory && <div className="restaurant-story story-pending-card">{pendingStory.mediaType === "video" ? <video src={pendingStory.preview} muted playsInline /> : <img src={pendingStory.preview} alt="Story en cours de publication" />}<span className="story-shade"/><div className="story-pending-status"><span className="story-pending-spinner"/><strong>Publication...</strong></div></div>}{storyGroups.map((group, groupIndex) => <div className="story-group" key={group[0].ownerId || group[0].id}><button className="restaurant-story" onClick={() => setStoryViewer({ group: groupIndex, index: 0 })}>{group[0].mediaType === "video" ? <video src={group[0].mediaUrl} muted playsInline preload="metadata"/> : <img src={group[0].mediaUrl} alt={`Story de ${group[0].authorName || "Utilisateur"}`}/>}<span className="story-shade"/><b style={{ backgroundColor: "#245d4c" }}>{(group[0].authorName || "U").slice(0, 2).toUpperCase()}</b><div><strong>{group[0].authorName || "Utilisateur"}</strong><small>{group.length} story{group.length === 1 ? "" : "s"} · {group[0].createdAt?.toDate?.()?.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) || ""}</small></div></button>{user?.uid === group[0].ownerId && <div className="story-menu-wrap"><button type="button" className="story-menu-trigger" onClick={(event) => toggleStoryMenu(event, group[0].ownerId)} aria-label="Options de mes stories"><MoreVertical size={18} /></button>{storyMenu === group[0].ownerId && <div className="story-menu"><button type="button" onClick={() => { setStoryMenu(null); removeStory(group.map((story) => story.id)); }}>Supprimer</button></div>}</div>}</div>)}
           </div>
 
           {visiblePosts.map((post) => {
@@ -216,7 +223,7 @@ function StoryViewer({ stories, index, user, onClose }) {
                 {broken && <div><UtensilsCrossed size={42} /><strong>{post.dish}</strong><span>Une belle assiette vous attend</span></div>}
                 <span className="dish-label">{post.dish}<b>{post.price}</b></span>
               </div>
-              <div className="post-meta"><span>{post.likes + (isLiked ? 1 : 0)} j&apos;aime</span><span>{post.comments + postComments.length} commentaires</span></div>
+              <div className="post-meta"><span>{post.likes || 0} j&apos;aime</span><span>{post.comments + postComments.length} commentaires</span></div>
               <div className="post-actions">
                 <button className={isLiked ? "liked" : ""} onClick={() => requireAuth(() => toggleLike(post.id))}><Heart size={20} fill={isLiked ? "currentColor" : "none"} />J&apos;aime</button>
                 <button onClick={() => requireAuth(() => setCommenting(post.id))}><MessageCircle size={20} />Commenter</button>
@@ -239,7 +246,7 @@ function StoryViewer({ stories, index, user, onClose }) {
       </div>
 
 
-      {storyDraft && <div className="modal-backdrop story-preview-backdrop" role="presentation"><section className="story-preview-modal" role="dialog" aria-modal="true" aria-labelledby="story-preview-title"><div className="story-preview-media">{storyDraft.mediaType === "video" ? <video src={storyDraft.preview} controls playsInline /> : <img src={storyDraft.preview} alt="Prévisualisation de votre story" />}</div><div className="story-preview-content"><p className="eyebrow">NOUVELLE STORY</p><h2 id="story-preview-title">Votre story est prête</h2><p>Vérifiez votre contenu avant de le partager avec votre communauté.</p>{storyPublishing && <div className="story-upload-progress"><span className="story-upload-spinner"/><span>Publication en cours...</span></div>}<div className="story-preview-actions"><button type="button" onClick={replaceStory} disabled={storyPublishing}>Remplacer</button><button type="button" className="story-publish-button" onClick={publishStory} disabled={storyPublishing}>{storyPublishing ? "Publication..." : "Publier"}</button></div></div></section></div>}
+      {storyDraft && <div className="modal-backdrop story-preview-backdrop" role="presentation"><section className="story-preview-modal" role="dialog" aria-modal="true" aria-labelledby="story-preview-title"><div className="story-preview-media">{storyDraft.mediaType === "video" ? <video src={storyDraft.preview} controls playsInline /> : <img src={storyDraft.preview} alt="Prévisualisation de votre story" />}</div><div className="story-preview-content"><p className="eyebrow">NOUVELLE STORY</p><h2 id="story-preview-title">Votre story est prête</h2><p>Vérifiez votre contenu avant de le partager avec votre communauté.</p><div className="story-preview-actions"><button type="button" onClick={replaceStory}>Remplacer</button><button type="button" className="story-publish-button" onClick={publishStory}>Publier</button></div></div></section></div>}
       {cartToast && <div className="cart-toast">✓ {cartToast}</div>}
       {showLogin && <div className="modal-backdrop" role="presentation"><section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title"><button className="modal-close" onClick={() => setShowLogin(false)} aria-label="Fermer"><X size={20} /></button><div className="login-mark">m<span>go</span></div><p className="eyebrow">BIENVENUE SUR MIAMGO</p><h2 id="login-title">Connectez-vous pour continuer</h2><p className="modal-text">Votre action vous attend juste après la connexion.</p><form onSubmit={handleAuth}><label>Adresse e-mail<input type="email" name="email" required placeholder="vous@exemple.com" /></label><label>Mot de passe<input type="password" name="password" required minLength="6" placeholder="Votre mot de passe" /></label>{authError && <p className="auth-error">{authError}</p>}<button className="submit-auth" disabled={isSubmitting}>{isSubmitting ? "Connexion..." : "Se connecter"}</button></form><button className="switch-auth" onClick={() => router.push("/inscription-client")}>Pas encore de compte? S&apos;inscrire</button></section></div>}
     </main>
