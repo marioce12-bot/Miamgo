@@ -105,8 +105,17 @@ export async function getRestaurantReviews(restaurantId) {
 }
 
 export async function addRestaurantReview(restaurantId, userId, review) {
-  const { addDoc, collection, db, serverTimestamp } = await firestore();
-  return addDoc(collection(db, "restaurants", restaurantId, "reviews"), { ...review, userId, createdAt: serverTimestamp() });
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  return setDoc(doc(db, "restaurants", restaurantId, "reviews", userId), { ...review, userId, createdAt: serverTimestamp() }, { merge: true });
+}
+export async function getRecentDeliveredOrders(customerId) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("customerId", "==", customerId), where("deliveryStatus", "==", "livree"), limit(20)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => {
+    const first = a.fulfilledAt?.toMillis?.() || new Date(a.fulfilledAt || 0).getTime();
+    const second = b.fulfilledAt?.toMillis?.() || new Date(b.fulfilledAt || 0).getTime();
+    return second - first;
+  });
 }
 export async function getExplorerItems() {
   const { collection, db, getDocs, limit, query, where } = await firestore();

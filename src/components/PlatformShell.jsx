@@ -6,7 +6,51 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { getDriverApplication, getOwnedRestaurant, getUserProfile } from "../lib/firestore";
+import { addRestaurantReview, getDriverApplication, getOwnedRestaurant, getRecentDeliveredOrders, getRestaurantBySlug, getRestaurantReviews, getUserProfile } from "../lib/firestore";
+
+function ReviewPrompt({ role, roleReady, pathname }) {
+  const [prompt, setPrompt] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!roleReady || role !== "client" || !auth.currentUser) return undefined;
+    let cancelled = false;
+    let timer;
+    async function findPrompt() {
+      const orders = await getRecentDeliveredOrders(auth.currentUser.uid).catch(() => []);
+      for (const order of orders) {
+        const deliveredAt = order.fulfilledAt?.toMillis?.() || new Date(order.fulfilledAt || 0).getTime();
+        const wait = 10 * 60 * 1000 - (Date.now() - deliveredAt);
+        const restaurantId = order.restaurantId;
+        const dismissedKey = `miamgo-review-prompt:${auth.currentUser.uid}:${restaurantId}`;
+        if (!restaurantId || localStorage.getItem(dismissedKey)) continue;
+        const restaurant = await getRestaurantBySlug(restaurantId).catch(() => null);
+        if (!restaurant) continue;
+        const reviews = await getRestaurantReviews(restaurant.id).catch(() => []);
+        if (reviews.some((review) => review.userId === auth.currentUser.uid)) { localStorage.setItem(dismissedKey, "reviewed"); continue; }
+        if (wait > 0) { timer = window.setTimeout(findPrompt, wait); return; }
+        if (!cancelled) setPrompt({ order, restaurant, dismissedKey });
+        return;
+      }
+    }
+    findPrompt();
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [pathname, role, roleReady]);
+
+  function dismiss() { if (prompt) localStorage.setItem(prompt.dismissedKey, "dismissed"); setPrompt(null); }
+  async function submit(event) {
+    event.preventDefault();
+    if (!prompt || !rating) { setError("Choisissez une note avant de continuer."); return; }
+    setSaving(true); setError("");
+    try { await addRestaurantReview(prompt.restaurant.id, auth.currentUser.uid, { rating, text: text.trim() }); localStorage.setItem(prompt.dismissedKey, "reviewed"); setPrompt(null); } catch (cause) { setError(cause.message || "Impossible d'enregistrer votre avis."); } finally { setSaving(false); }
+  }
+
+  if (!prompt) return null;
+  return <div className="review-prompt-backdrop"><section className="review-prompt" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title"><button type="button" className="review-prompt-close" onClick={dismiss} aria-label="Fermer">×</button><div className="review-prompt-restaurant">{prompt.restaurant.photoURL || prompt.restaurant.coverURL ? <img src={prompt.restaurant.photoURL || prompt.restaurant.coverURL} alt="" /> : <span>{(prompt.restaurant.name || "R").slice(0, 2).toUpperCase()}</span>}<div><strong>{prompt.restaurant.name || "Restaurant Miamgo"}</strong><small>Commande livrée</small></div></div><p className="eyebrow">VOTRE AVIS COMPTE</p><h2 id="review-prompt-title">Comment s&apos;est passée votre expérience ?</h2><p className="review-prompt-text">Votre commande est arrivée. Laissez une note et un petit mot pour aider ce restaurant.</p><form onSubmit={submit}><div className="review-prompt-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} onClick={() => setRating(value)} aria-label={`${value} étoiles`}><span className={value <= rating ? "selected" : ""}>★</span></button>)}</div><textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Votre avis (facultatif)" />{error && <p className="review-prompt-error">{error}</p>}<button className="review-prompt-submit" type="submit" disabled={saving}>{saving ? "Enregistrement..." : "Publier mon avis"}</button></form><button type="button" className="review-prompt-later" onClick={dismiss}>Plus tard</button></section></div>;
+}
 
 export default function PlatformShell({ children, active = "", publicPage = false }) {
   const pathname = usePathname();
@@ -44,6 +88,7 @@ export default function PlatformShell({ children, active = "", publicPage = fals
       {isRestaurant && !publicPage && !isPublicAuth && <aside className="restaurant-desktop-nav"><p className="eyebrow">ESPACE RESTAURANT</p>{[["Commandes", "/espace-resto/commandes", PackageCheck], ["Menu", "/espace-resto/menu", Store], ["Livraison", "/espace-resto/livraison", Truck], ["Fil Miamgo", "/accueil", Home], ["Publications", "/espace-resto/publier", ClipboardList], ["Statistiques", "/espace-resto/statistiques", LayoutDashboard], ["Profil boutique", "/espace-resto/profil", UserRound], ["Abonnement", "/espace-resto/abonnement", Bell]].map(([label, href, Icon]) => <Link className={currentItem(href) ? "active" : ""} href={href} key={label}><Icon size={17}/>{label}</Link>)}</aside>}
       {isDriver && !isPublicAuth && <aside className="driver-desktop-nav"><p className="eyebrow">ESPACE LIVREUR</p>{[["Tableau de bord", "/espace-livreur", LayoutDashboard], ["Historique", "/espace-livreur/historique", ClipboardList], ["Chiffre d'affaires", "/espace-livreur/chiffre-affaires", BarChart3], ["Restaurants affiliés", "/espace-livreur/affiliations", Store], ["Abonnement", "/espace-livreur/paiement", Wallet], ["Profil / Paramètres", "/espace-livreur/profil", UserRound]].map(([label, href, Icon]) => <Link className={currentItem(href) ? "active" : ""} href={href} key={label}><Icon size={17}/>{label}</Link>)}<button className="driver-sidebar-logout">Déconnexion</button></aside>}
       <div className={roleReady ? "role-content" : "role-content role-content-loading"}>{children}</div>
+      <ReviewPrompt role={role} roleReady={roleReady} pathname={pathname} />
       {isRestaurant && (pathname === "/espace-resto/commandes" || pathname === "/espace-resto/menu") && <Link className="restaurant-fab" href={pathname === "/espace-resto/menu" ? "/espace-resto/menu?create=1" : "/espace-resto/publier"}><Plus size={23} /></Link>}
     </div>
   );
