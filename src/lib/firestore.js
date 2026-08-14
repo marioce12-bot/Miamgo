@@ -131,6 +131,10 @@ export async function getCart(userId) {
   const snapshot = await getDoc(doc(db, "carts", userId));
   return snapshot.exists() ? snapshot.data() : { items: [] };
 }
+export async function updateCart(userId, items) {
+  const { db, doc, serverTimestamp, setDoc } = await firestore();
+  await setDoc(doc(db, "carts", userId), { userId, items, updatedAt: serverTimestamp() }, { merge: true });
+}
 export async function getRestaurantPosts(restaurantId) {
   const { collection, db, getDocs, limit, query, where } = await firestore();
   const snapshot = await getDocs(query(collection(db, "posts"), where("restaurantId", "==", restaurantId), limit(50)));

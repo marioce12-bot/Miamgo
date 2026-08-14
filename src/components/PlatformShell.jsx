@@ -36,7 +36,7 @@ export default function PlatformShell({ children, active = "", publicPage = fals
   return (
     <div className={`platform-page ${isRestaurant ? "restaurant-shell" : ""} ${isPublicAuth ? "public-auth-page" : ""} ${authType}`}>
       <header className="portal-header">
-        {pathname !== "/" && pathname !== "/accueil" && <button className="desktop-back" onClick={() => router.replace(isRestaurant ? "/espace-resto" : "/accueil")}>← Retour</button>}
+        {pathname !== "/" && pathname !== "/accueil" && <button className={`desktop-back ${pathname.startsWith("/restaurant/") ? "restaurant-back" : ""}`} onClick={() => router.replace(isRestaurant ? "/espace-resto" : "/accueil")}>← Retour</button>}
         <Link className="brand brand-with-logo" href="/accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /></Link>
         <div className="portal-location"><MapPin size={16} /><span>{location.city}, {location.country}</span></div>
         <div className="portal-actions"><Link className="notification-link" href={profileLink} aria-label="Notifications"><Bell size={19} /><b>2</b></Link><Link href={profileLink}>Mon profil</Link></div>
