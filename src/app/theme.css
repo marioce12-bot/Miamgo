@@ -252,6 +252,31 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
 .review-prompt-submit:disabled { opacity:.6; }
 .review-prompt-later { display:block; width:100%; padding:11px 0 0; color:var(--muted); background:transparent; font-size:11px; }
 .review-prompt-error { margin:0; color:#b94d3f; font-size:11px; }
+.restaurant-menu-page { max-width:1060px; }
+.restaurant-menu-page-heading { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:22px; }
+.restaurant-menu-page-heading h1 { margin:4px 0 8px; font-size:38px; letter-spacing:-1px; }
+.restaurant-menu-page-heading p:not(.eyebrow) { margin:0; color:var(--muted); font-size:13px; }
+.menu-category-tabs { display:flex; gap:8px; overflow:auto; padding:4px 0 15px; scrollbar-width:none; }
+.menu-category-tabs::-webkit-scrollbar { display:none; }
+.menu-category-tabs button { flex:0 0 auto; padding:9px 13px; color:#68766d; background:#fffdf9; border:1px solid var(--line); border-radius:20px; font-size:11px; font-weight:800; }
+.menu-category-tabs button.active { color:#fff; background:var(--orange); border-color:var(--orange); }
+.restaurant-menu-admin-list { display:grid; gap:11px; }
+.restaurant-menu-admin-card { display:grid; grid-template-columns:76px 1fr auto; gap:14px; align-items:center; padding:11px; background:#fffdf9; border:1px solid var(--line); border-radius:14px; }
+.restaurant-menu-admin-image { display:grid; place-items:center; width:76px; height:70px; color:var(--orange); background:#f3e8d6 center/cover; border-radius:10px; }
+.restaurant-menu-admin-card > div:nth-child(2) { display:grid; gap:4px; }
+.restaurant-menu-admin-card strong { font-size:13px; }
+.restaurant-menu-admin-card small { color:var(--muted); font-size:10px; }
+.restaurant-menu-admin-card b { color:var(--orange); font-size:11px; }
+.restaurant-menu-admin-actions { display:flex; gap:7px; }
+.restaurant-menu-admin-actions button { display:grid; place-items:center; width:34px; height:34px; color:var(--green); background:#e7f2e9; border-radius:8px; }
+.restaurant-menu-admin-actions button:last-child { color:#bd5544; background:#fff0ed; }
+.menu-editor-modal { position:relative; width:min(100%,500px); padding:28px; background:#fffaf1; border-radius:18px; box-shadow:0 25px 70px rgba(0,0,0,.3); }
+.menu-editor-modal h2 { margin:5px 0 22px; font-size:26px; }
+.menu-editor-modal form { display:grid; gap:13px; }
+.menu-editor-modal label { display:grid; gap:6px; color:#617067; font-size:11px; font-weight:800; }
+.menu-editor-modal input,.menu-editor-modal select { width:100%; box-sizing:border-box; min-height:42px; padding:10px 11px; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:8px; outline-color:var(--green); font:inherit; font-weight:500; }
+.menu-editor-modal input[type=file] { padding:8px; }
+.menu-editor-modal .dashboard-primary-action { justify-content:center; margin-top:4px; }
 .modal-open { overflow:hidden; }
 .explorer-modal-backdrop { position:fixed; z-index:80; inset:0; display:grid; place-items:center; padding:20px; background:rgba(12,25,18,.68); backdrop-filter:blur(6px); }
 .explorer-modal { position:relative; display:grid; grid-template-columns:minmax(230px,.9fr) minmax(280px,1fr); width:min(760px,100%); overflow:hidden; background:#fffaf1; border-radius:20px; box-shadow:0 25px 70px rgba(0,0,0,.3); }
@@ -321,6 +346,18 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
   .restaurant-review-section form { margin-top:18px; }
   .review-prompt-backdrop { align-items:end; padding:0; }
   .review-prompt { width:100%; padding:24px 20px 22px; border-radius:22px 22px 0 0; }
+  .restaurant-menu-page { padding:24px 25px 88px; }
+  .restaurant-menu-page-heading { display:block; margin-bottom:18px; }
+  .restaurant-menu-page-heading h1 { font-size:34px; }
+  .restaurant-menu-page-heading .dashboard-primary-action { margin-top:22px; }
+  .menu-category-tabs { flex-wrap:wrap; gap:7px; }
+  .menu-category-tabs button { font-size:11px; }
+  .restaurant-menu-admin-card { grid-template-columns:60px 1fr auto; gap:9px; }
+  .restaurant-menu-admin-image { width:60px; height:60px; }
+  .restaurant-menu-admin-card strong { font-size:12px; }
+  .restaurant-menu-admin-actions { flex-direction:column; }
+  .menu-editor-modal { width:calc(100% - 30px); padding:24px 18px; border-radius:18px; }
+  .menu-editor-modal h2 { font-size:24px; }
   .explorer-modal-backdrop { align-items:end; padding:0; }
   .explorer-modal { display:block; width:100%; max-height:90vh; overflow:auto; border-radius:22px 22px 0 0; }
   .explorer-modal-image { height:240px; min-height:0; }
