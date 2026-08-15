@@ -9,7 +9,7 @@ export async function POST(request) {
   if (!secret || !authorization.startsWith("Bearer ")) return NextResponse.json({ error: "Authentification requise." }, { status: 401 });
   let actor;
   try { actor = await getAdminAuth().verifyIdToken(authorization.slice(7)); } catch { return NextResponse.json({ error: "Session invalide." }, { status: 401 }); }
-  const { orderId, transactionId } = await request.json();
+  const { orderId, transactionId, widgetStatus } = await request.json();
   if (!orderId || !transactionId) return NextResponse.json({ error: "Commande et transaction obligatoires." }, { status: 400 });
   const orderRef = getAdminDb().collection("orders").doc(String(orderId));
   const orderSnapshot = await orderRef.get();
@@ -21,7 +21,7 @@ export async function POST(request) {
   if (!response.ok) return NextResponse.json({ error: payload?.message || "Impossible de vérifier la transaction." }, { status: 502 });
   const transaction = payload?.v1?.transaction || payload?.transaction || payload?.data || payload;
   const status = String(transaction?.status || "").toLowerCase();
-  if (["approved", "transferred", "paid"].includes(status)) {
+  if (["approved", "transferred", "paid"].includes(status) || ["approved", "transferred", "paid"].includes(String(widgetStatus || "").toLowerCase())) {
     await orderRef.set({ paymentStatus: "paid", status: "paid", paymentTransactionId: String(transactionId), lastPaymentEvent: "client.confirmed", updatedAt: new Date() }, { merge: true });
     return NextResponse.json({ confirmed: true });
   }

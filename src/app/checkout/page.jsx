@@ -55,11 +55,16 @@ export default function CheckoutPage() {
       if (!orderId || !user) return;
       const transaction = event.detail?.transaction || event.detail;
       const transactionIdFromWidget = transaction?.id || transaction?.transaction?.id || transactionId;
+      const widgetStatus = transaction?.status || transaction?.transaction?.status || event.detail?.status || "";
       if (!transactionIdFromWidget) return;
       const token = await user.getIdToken();
-      const response = await fetch("/api/fedapay/confirm-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId, transactionId: transactionIdFromWidget }) });
-      const result = await response.json().catch(() => ({}));
-      if (response.ok && result.confirmed) { setPaymentLoading(false); setStatus(`Commande confirmée ! Numéro ${orderSerial || orderId}.`); setShowQr(true); }
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const response = await fetch("/api/fedapay/confirm-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId, transactionId: transactionIdFromWidget, widgetStatus }) });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok && result.confirmed) { setPaymentLoading(false); setStatus(`Commande confirmée ! Numéro ${orderSerial || orderId}.`); setShowQr(true); return; }
+        if (attempt < 5) await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+      setPaymentLoading(false); setStatus("Paiement reçu. La confirmation FedaPay prend encore quelques instants.");
     }
     window.addEventListener("miamgo-fedapay-complete", confirmFromWidget);
     return () => window.removeEventListener("miamgo-fedapay-complete", confirmFromWidget);
