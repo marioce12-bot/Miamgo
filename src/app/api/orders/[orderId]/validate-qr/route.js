@@ -16,23 +16,35 @@ export async function POST(request, { params }) {
   let orderRef = db.collection("orders").doc(params.orderId);
   if (!(await orderRef.get()).exists) { const bySerial = await db.collection("orders").where("serialNumber", "==", params.orderId).limit(1).get(); if (bySerial.empty) return NextResponse.json({ error: "Commande introuvable." }, { status: 404 }); orderRef = bySerial.docs[0].ref; }
   let assignedDriverId = null;
+  let validatedOrder = null;
   const result = await db.runTransaction(async (transaction) => {
      const snapshot = await transaction.get(orderRef);
     if (!snapshot.exists) throw new Error("ORDER_NOT_FOUND");
-     const order = snapshot.data();
-     assignedDriverId = order.assignedDriverId || null;
+      const order = snapshot.data();
+      assignedDriverId = order.assignedDriverId || null;
+      const restaurantSnapshot = await db.collection("restaurants").doc(String(order.restaurantId)).get();
+      const isOwner = restaurantSnapshot.exists && restaurantSnapshot.data().ownerId === actor.uid;
+      if (!isOwner && assignedDriverId !== actor.uid) throw new Error("NOT_ALLOWED");
     if (order.validationStatus === "validated" || order.fulfilledAt) throw new Error("QR_ALREADY_USED");
     if (order.paymentStatus !== "paid") throw new Error("ORDER_NOT_PAID");
     const expectedStatus = match[1] === "pickup" ? ["ready", "paid", "pending"] : ["out_for_delivery"];
     if (!expectedStatus.includes(order.status)) throw new Error("ORDER_STATUS_INVALID");
      const update = { validationStatus: "validated", fulfilledAt: new Date(), fulfilledBy: actor.uid, fulfillmentValidation: match[1], status: "completed", deliveryStatus: "livree", trackingActive: false, updatedAt: new Date() };
-     transaction.set(orderRef, update, { merge: true });
+      transaction.set(orderRef, update, { merge: true });
+      validatedOrder = { id: snapshot.id, serialNumber: order.serialNumber || snapshot.id, customerId: order.customerId, restaurantId: order.restaurantId, customerName: "Client", items: order.items || [], deliveryMode: order.deliveryMode };
     return update;
   }).catch((error) => ({ error: error.message }));
   if (result.error) {
-    const messages = { ORDER_NOT_FOUND: "Commande introuvable.", QR_ALREADY_USED: "Ce QR a déjà été utilisé.", ORDER_NOT_PAID: "Cette commande n'est pas encore payée.", ORDER_STATUS_INVALID: "La commande n'est pas dans un statut validable." };
+     const messages = { ORDER_NOT_FOUND: "Commande introuvable.", QR_ALREADY_USED: "Ce QR a déjà été utilisé.", ORDER_NOT_PAID: "Cette commande n'est pas encore payée.", ORDER_STATUS_INVALID: "La commande n'est pas dans un statut validable.", NOT_ALLOWED: "Vous n’êtes pas autorisé à valider cette commande." };
     return NextResponse.json({ error: messages[result.error] || "Validation refusée." }, { status: 409 });
   }
   if (assignedDriverId) await getAdminRealtimeDb().ref(`deliveryLocations/${orderRef.id}/${assignedDriverId}`).remove();
-  return NextResponse.json({ ok: true, message: "Commande validée.", validation: result });
+   const customerSnapshot = await getAdminDb().collection("users").doc(String(validatedOrder.customerId)).get();
+   const customer = customerSnapshot.exists ? customerSnapshot.data() : {};
+   const menuSnapshot = await getAdminDb().collection("restaurants").doc(String(validatedOrder.restaurantId || "")).collection("menuItems").get().catch(() => ({ docs: [] }));
+   const menu = new Map(menuSnapshot.docs.map((item) => [item.id, item.data()]));
+   validatedOrder.customerName = customer.displayName || customer.email || "Client";
+   validatedOrder.customerPhoto = customer.photoURL || null;
+   validatedOrder.items = validatedOrder.items.map((item) => ({ ...item, imageUrl: item.imageUrl || menu.get(item.id)?.imageUrl || null }));
+   return NextResponse.json({ ok: true, message: "Commande validée.", validation: result, order: validatedOrder });
 }
