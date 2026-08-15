@@ -52,7 +52,7 @@ function ReviewPrompt({ role, roleReady, pathname }) {
   return <div className="review-prompt-backdrop"><section className="review-prompt" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title"><button type="button" className="review-prompt-close" onClick={dismiss} aria-label="Fermer">×</button><div className="review-prompt-restaurant">{prompt.restaurant.photoURL || prompt.restaurant.coverURL ? <img src={prompt.restaurant.photoURL || prompt.restaurant.coverURL} alt="" /> : <span>{(prompt.restaurant.name || "R").slice(0, 2).toUpperCase()}</span>}<div><strong>{prompt.restaurant.name || "Restaurant Miamgo"}</strong><small>Commande livrée</small></div></div><p className="eyebrow">VOTRE AVIS COMPTE</p><h2 id="review-prompt-title">Comment s&apos;est passée votre expérience ?</h2><p className="review-prompt-text">Votre commande est arrivée. Laissez une note et un petit mot pour aider ce restaurant.</p><form onSubmit={submit}><div className="review-prompt-stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} onClick={() => setRating(value)} aria-label={`${value} étoiles`}><span className={value <= rating ? "selected" : ""}>★</span></button>)}</div><textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Votre avis (facultatif)" />{error && <p className="review-prompt-error">{error}</p>}<button className="review-prompt-submit" type="submit" disabled={saving}>{saving ? "Enregistrement..." : "Publier mon avis"}</button></form><button type="button" className="review-prompt-later" onClick={dismiss}>Plus tard</button></section></div>;
 }
 
-export default function PlatformShell({ children, active = "", publicPage = false }) {
+export default function PlatformShell({ children, active = "", publicPage = false, hideMobileNav = false }) {
   const pathname = usePathname();
   const router = useRouter();
   const [location, setLocation] = useState({ city: "Cotonou", country: "BJ" });
@@ -78,7 +78,7 @@ export default function PlatformShell({ children, active = "", publicPage = fals
   const currentItem = (href) => href === "/accueil" ? pathname === "/accueil" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className={`platform-page ${isRestaurant ? "restaurant-shell" : ""} ${isPublicAuth ? "public-auth-page" : ""} ${authType}`}>
+    <div className={`platform-page ${isRestaurant ? "restaurant-shell" : ""} ${isPublicAuth ? "public-auth-page" : ""} ${authType} ${hideMobileNav ? "hide-mobile-nav" : ""}`}>
       <header className="portal-header">
         {pathname !== "/" && pathname !== "/accueil" && <button className={`desktop-back ${pathname.startsWith("/restaurant/") ? "restaurant-back" : ""}`} onClick={() => router.replace(isRestaurant ? "/espace-resto" : "/accueil")}>← Retour</button>}
         <Link className="brand brand-with-logo" href="/accueil"><img src="/miamgo-logo.png" alt="Logo Miamgo" /></Link>

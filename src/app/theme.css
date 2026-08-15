@@ -255,7 +255,32 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
 .restaurant-orders-heading { display:flex; justify-content:space-between; align-items:end; margin-bottom:22px; }
 .restaurant-orders-heading h1,.orders-page > h1 { margin:4px 0 7px; font-size:38px; letter-spacing:-1px; }
 .restaurant-orders-heading p:not(.eyebrow) { margin:0; color:var(--muted); font-size:13px; }
+.restaurant-scan-link,.restaurant-order-scan-button { display:flex; gap:6px; align-items:center; color:#fff; background:var(--green); border-radius:8px; font-size:10px; font-weight:900; }
+.restaurant-scan-link { padding:10px 12px; }
+.client-orders-search { display:flex; gap:8px; align-items:center; max-width:520px; padding:11px 13px; margin-bottom:18px; color:var(--muted); background:#fffdf9; border:1px solid var(--line); border-radius:10px; }
+.client-orders-search input { width:100%; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; font-size:12px; }
+.restaurant-client-list { display:grid; gap:11px; }
+.restaurant-client-card { display:flex; align-items:center; gap:13px; padding:14px; color:var(--ink); background:#fffdf9; border:1px solid var(--line); border-radius:15px; box-shadow:0 7px 18px rgba(50,44,30,.05); }
+.restaurant-client-card > svg { margin-left:auto; color:var(--orange); }
+.restaurant-client-avatar { display:grid; place-items:center; flex:0 0 auto; width:52px; height:52px; overflow:hidden; color:#fff; background:var(--green); border-radius:50%; font-size:12px; font-weight:900; }
+.restaurant-client-avatar img { width:100%; height:100%; object-fit:cover; }
+.restaurant-client-info { display:grid; gap:4px; }
+.restaurant-client-info strong { font-size:14px; }
+.restaurant-client-info small { color:var(--muted); font-size:10px; }
+.restaurant-client-info b { color:var(--orange); font-size:10px; }
+.restaurant-customer-orders { max-width:900px; }
+.restaurant-customer-header { display:flex; gap:15px; align-items:center; padding:19px; margin:18px 0 22px; background:#e8f2e9; border-radius:16px; }
+.restaurant-customer-header h1 { margin:4px 0; font-size:27px; }
+.restaurant-customer-header p:not(.eyebrow) { margin:0; color:var(--muted); font-size:11px; }
+.restaurant-customer-order-list { display:grid; gap:12px; }
 .restaurant-order-list,.customer-order-list { display:grid; gap:13px; }
+.restaurant-order-tabs,.customer-order-tabs { display:flex; gap:8px; overflow:auto; padding:2px 0 18px; scrollbar-width:none; }
+.restaurant-order-tabs::-webkit-scrollbar,.customer-order-tabs::-webkit-scrollbar { display:none; }
+.restaurant-order-tabs button,.customer-order-tabs button { display:flex; gap:6px; align-items:center; flex:0 0 auto; padding:9px 13px; color:#69766e; background:#fffdf9; border:1px solid var(--line); border-radius:20px; font-size:11px; font-weight:800; }
+.restaurant-order-tabs button.active,.customer-order-tabs button.active { color:#fff; background:var(--green); border-color:var(--green); }
+.restaurant-order-tabs b,.customer-order-tabs b { opacity:.7; font-size:10px; }
+.orders-page-heading { display:flex; justify-content:space-between; align-items:end; margin-bottom:17px; }
+.orders-page-heading > svg { padding:12px; color:var(--orange); background:#fff0d8; border-radius:13px; }
 .restaurant-order-card,.customer-order-card { padding:17px; background:#fffdf9; border:1px solid var(--line); border-radius:15px; box-shadow:0 8px 20px rgba(50,44,30,.05); }
 .restaurant-order-card header,.customer-order-card header { display:flex; justify-content:space-between; gap:12px; align-items:start; }
 .restaurant-order-card header div,.customer-order-card header div { display:grid; gap:4px; }
@@ -269,6 +294,7 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
 .restaurant-order-card footer button { display:flex; gap:6px; align-items:center; padding:10px 12px; color:#fff; background:var(--orange); border-radius:8px; font-size:10px; font-weight:900; }
 .restaurant-order-card footer select { min-height:36px; padding:7px 10px; color:var(--green); background:#e7f2e9; border:0; border-radius:8px; font-size:10px; font-weight:800; }
 .order-ready-note,.order-completed-note { display:flex; gap:6px; align-items:center; color:var(--green); font-size:11px; font-weight:800; }
+.restaurant-order-scan-button { padding:10px 12px; }
 .customer-order-card { padding:18px; }
 .customer-order-status { display:flex; gap:6px; align-items:center; color:var(--orange); font-size:11px; font-weight:900; }
 .customer-order-status span { width:8px; height:8px; background:currentColor; border-radius:50%; }
@@ -385,6 +411,14 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
   .restaurant-order-card header,.customer-order-card header { align-items:start; }
   .order-status-tag { max-width:125px; text-align:right; }
   .restaurant-menu-page { padding:24px 25px 88px; }
+  .restaurant-scan-link { margin-top:15px; width:max-content; }
+  .restaurant-client-card { padding:12px; }
+  .restaurant-client-avatar { width:46px; height:46px; }
+  .restaurant-customer-orders { padding:22px 18px 32px; }
+  .restaurant-customer-header { align-items:flex-start; padding:15px; }
+  .restaurant-customer-header h1 { font-size:24px; }
+  .hide-mobile-nav .portal-header { margin-bottom:0; }
+  .hide-mobile-nav .restaurant-desktop-nav { display:none; }
   .restaurant-menu-page-heading { display:block; margin-bottom:18px; }
   .restaurant-menu-page-heading h1 { font-size:34px; }
   .restaurant-menu-page-heading .dashboard-primary-action { margin-top:22px; }
