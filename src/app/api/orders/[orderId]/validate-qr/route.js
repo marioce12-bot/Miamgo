@@ -9,12 +9,16 @@ export async function POST(request, { params }) {
   let actor;
   try { actor = await getAdminAuth().verifyIdToken(authorization.slice(7)); } catch { return NextResponse.json({ error: "Session invalide." }, { status: 401 }); }
   const body = await request.json();
-  const qr = String(body.qr || "");
-  const match = qr.match(/^miamgo:(pickup|delivery):(.+)$/);
-  if (!match || match[2] !== params.orderId) return NextResponse.json({ error: "QR invalide ou non associé à cette commande." }, { status: 400 });
+  const rawQr = String(body.qr || "");
+  const qr = rawQr.trim();
+  const match = qr.match(/^miamgo\s*:\s*(pickup|delivery)\s*:\s*([^:\s]+)\s*$/i);
+  console.info("[QR_VALIDATE] received", { rawQr, normalizedQr: qr, routeOrderId: params.orderId, parsedMode: match?.[1] || null, parsedReference: match?.[2] || null, actorId: actor.uid });
+  if (!match) { console.warn("[QR_VALIDATE] rejected: invalid format", { rawQr, expected: "miamgo:{pickup|delivery}:{orderId}" }); return NextResponse.json({ error: "QR invalide. Format attendu : miamgo:pickup:ID ou miamgo:delivery:ID." }, { status: 400 }); }
+  const qrReference = match[2];
+  if (qrReference !== params.orderId) { console.warn("[QR_VALIDATE] rejected: route/reference mismatch", { routeOrderId: params.orderId, qrReference }); return NextResponse.json({ error: "QR invalide ou non associé à cette commande." }, { status: 400 }); }
   const db = getAdminDb();
   let orderRef = db.collection("orders").doc(params.orderId);
-  if (!(await orderRef.get()).exists) { const bySerial = await db.collection("orders").where("serialNumber", "==", params.orderId).limit(1).get(); if (bySerial.empty) return NextResponse.json({ error: "Commande introuvable." }, { status: 404 }); orderRef = bySerial.docs[0].ref; }
+  if (!(await orderRef.get()).exists) { const bySerial = await db.collection("orders").where("serialNumber", "==", params.orderId).limit(1).get(); if (bySerial.empty) { console.warn("[QR_VALIDATE] rejected: order not found", { orderId: params.orderId, qrReference }); return NextResponse.json({ error: "Commande introuvable." }, { status: 404 }); } orderRef = bySerial.docs[0].ref; }
   let assignedDriverId = null;
   let validatedOrder = null;
   const result = await db.runTransaction(async (transaction) => {
@@ -34,7 +38,8 @@ export async function POST(request, { params }) {
       validatedOrder = { id: snapshot.id, serialNumber: order.serialNumber || snapshot.id, customerId: order.customerId, restaurantId: order.restaurantId, customerName: "Client", items: order.items || [], deliveryMode: order.deliveryMode };
     return update;
   }).catch((error) => ({ error: error.message }));
-  if (result.error) {
+   if (result.error) {
+     console.warn("[QR_VALIDATE] rejected during order validation", { orderId: orderRef.id, qrReference, mode: match[1], reason: result.error, actorId: actor.uid });
      const messages = { ORDER_NOT_FOUND: "Commande introuvable.", QR_ALREADY_USED: "Ce QR a déjà été utilisé.", ORDER_NOT_PAID: "Cette commande n'est pas encore payée.", ORDER_STATUS_INVALID: "La commande n'est pas dans un statut validable.", NOT_ALLOWED: "Vous n’êtes pas autorisé à valider cette commande." };
     return NextResponse.json({ error: messages[result.error] || "Validation refusée." }, { status: 409 });
   }
