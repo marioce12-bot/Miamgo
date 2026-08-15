@@ -28,10 +28,11 @@ export async function POST(request) {
   const deliveryFee = order.deliveryMode === "pickup" ? 0 : Number(order.deliveryFee || 0);
   const courierShare = Math.max(0, Math.min(deliveryFee, Number(order.courierShare || 0)));
   const breakdown = splitOrderAmount({ foodSubtotal, deliveryFee, courierShare, paidOrderCount: paidOrders.length });
-  const baseUrl = process.env.FEDAPAY_ENVIRONMENT === "sandbox" ? "https://sandbox-api.fedapay.com/v1" : "https://api.fedapay.com/v1";
+   const isSandbox = process.env.FEDAPAY_ENVIRONMENT === "sandbox" || /sandbox|test/i.test(secret);
+   const baseUrl = isSandbox ? "https://sandbox-api.fedapay.com/v1" : "https://api.fedapay.com/v1";
   const response = await fetch(`${baseUrl}/transactions`, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ description: `Commande Miamgo ${input.orderId}`, amount: breakdown.total, currency: { iso: "XOF" }, customer: { email: decoded.email || undefined }, callback_url: `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/api/fedapay/webhook`, custom_metadata: { orderId: input.orderId, breakdown } }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) return NextResponse.json({ error: payload?.message || payload?.error || "FedaPay a refusé la transaction.", details: payload?.errors || payload?.data || null }, { status: 502 });
+   if (!response.ok) { console.error("FedaPay transaction rejected", { status: response.status, payload, environment: isSandbox ? "sandbox" : "live", amount: breakdown.total }); return NextResponse.json({ error: payload?.message || payload?.error || "FedaPay a refusé la transaction.", details: payload?.errors || payload?.data || null, fedapayStatus: response.status }, { status: 502 }); }
   const transactionId = extractFedaPayTransactionId(payload);
   if (!transactionId) return NextResponse.json({ error: "FedaPay n’a pas retourné d’identifiant de transaction." }, { status: 502 });
   await orderRef.set({ paymentStatus: "pending", paymentTransactionId: String(transactionId), financials: breakdown, total: breakdown.total, updatedAt: new Date() }, { merge: true });

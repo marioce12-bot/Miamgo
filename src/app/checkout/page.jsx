@@ -50,6 +50,21 @@ export default function CheckoutPage() {
     return () => stop?.();
   }, [orderId, orderSerial]);
 
+  useEffect(() => {
+    async function confirmFromWidget(event) {
+      if (!orderId || !user) return;
+      const transaction = event.detail?.transaction || event.detail;
+      const transactionIdFromWidget = transaction?.id || transaction?.transaction?.id || transactionId;
+      if (!transactionIdFromWidget) return;
+      const token = await user.getIdToken();
+      const response = await fetch("/api/fedapay/confirm-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId, transactionId: transactionIdFromWidget }) });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.confirmed) { setPaymentLoading(false); setStatus(`Commande confirmée ! Numéro ${orderSerial || orderId}.`); setShowQr(true); }
+    }
+    window.addEventListener("miamgo-fedapay-complete", confirmFromWidget);
+    return () => window.removeEventListener("miamgo-fedapay-complete", confirmFromWidget);
+  }, [orderId, orderSerial, transactionId, user]);
+
   async function locate() {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(async (position) => {

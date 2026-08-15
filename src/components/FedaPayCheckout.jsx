@@ -13,12 +13,12 @@ const FedaPayCheckout = forwardRef(function FedaPayCheckout({ transactionId, amo
         const response = await fetch("/api/fedapay/public-config");
         const config = await response.json();
         if (!response.ok) throw new Error(config.error);
-        const widget = window.FedaPay.init({
+         const widget = window.FedaPay.init({
           public_key: config.publicKey,
           transaction: { id: transactionId, amount, description },
           customer: { email: customer?.email || undefined },
           currency: { iso: "XOF" },
-          onComplete,
+           onComplete: (result) => { window.dispatchEvent(new CustomEvent("miamgo-fedapay-complete", { detail: result })); onComplete?.(result); },
         });
         if (!widget || typeof widget.open !== "function") throw new Error("FedaPay n'a pas retourné un widget ouvrable.");
         widget.open();
