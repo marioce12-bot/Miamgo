@@ -267,7 +267,7 @@ export async function createOrder(customerId, order) {
 
 export async function getActiveDriverOrder(driverId) {
   const { collection, db, getDocs, limit, orderBy, query, where } = await firestore();
-  const snapshot = await getDocs(query(collection(db, "orders"), where("assignedDriverId", "==", driverId), where("deliveryStatus", "in", ["assignee", "en_cours_livraison"]), orderBy("updatedAt", "desc"), limit(1)));
+  const snapshot = await getDocs(query(collection(db, "orders"), where("assignedDriverId", "==", driverId), where("deliveryStatus", "in", ["proposee", "assignee", "en_cours_livraison"]), orderBy("updatedAt", "desc"), limit(1)));
   return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 }
 
@@ -295,6 +295,16 @@ export async function getFeedData(pageSize = 10, cursor = null) {
 }export async function updateRestaurantMenuItem(restaurantId, itemId, changes) {
   const { db, doc, serverTimestamp, setDoc } = await firestore();
   await setDoc(doc(db, "restaurants", restaurantId, "menuItems", itemId), { ...changes, updatedAt: serverTimestamp() }, { merge: true });
+}
+export async function getRestaurantOrders(restaurantId) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("restaurantId", "==", restaurantId), limit(50)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
+}
+export async function getCustomerOrders(customerId) {
+  const { collection, db, getDocs, limit, query, where } = await firestore();
+  const snapshot = await getDocs(query(collection(db, "orders"), where("customerId", "==", customerId), limit(50)));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
 }
 
 export async function deleteRestaurantMenuItem(restaurantId, itemId) {

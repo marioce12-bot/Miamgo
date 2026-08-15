@@ -3,97 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Script from "next/script";
 import Link from "next/link";
-import { Check, ChevronLeft, LocateFixed, MapPin, ShoppingBag, Truck } from "lucide-react";
+import { Check, ChevronLeft, LocateFixed, MapPin, ShoppingBag, Truck, X } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import PlatformShell from "../../components/PlatformShell";
 import FedaPayCheckout from "../../components/FedaPayCheckout";
-import MiamgoQr from "../../components/MiamgoQr";
 import { auth } from "../../lib/firebase";
 import { createOrder, ensureCustomerProfile, getCart } from "../../lib/firestore";
 import { extractFedaPayTransactionId } from "../../lib/fedapay";
 
-const fallbackItems = [];
-const numericPrice = (value) => { if (typeof value === "number") return Number.isFinite(value) ? value : 0; const digits = String(value || "").replace(/[^0-9-]/g, ""); return Number(digits) || 0; };
+const numericPrice = (value) => { if (typeof value === "number") return Number.isFinite(value) ? value : 0; return Number(String(value || "").replace(/[^0-9-]/g, "")) || 0; };
 const normalizeCartItem = (item) => ({ ...item, name: item.name || item.dish || "Article", price: numericPrice(item.price), quantity: Math.max(1, Number(item.quantity) || 1) });
 
 export default function CheckoutPage() {
-  const router = useRouter();
-  const [delivery, setDelivery] = useState("delivery");
-  const [items, setItems] = useState(fallbackItems);
-  const [restaurantId, setRestaurantId] = useState("chez-aicha");
-  const [user, setUser] = useState(null);
-  const [status, setStatus] = useState("");
-  const [coordinates, setCoordinates] = useState(null);
-  const [quote, setQuote] = useState(null);
-  const [locating, setLocating] = useState(false);
-  const [transactionId, setTransactionId] = useState(null);
-  const [orderId, setOrderId] = useState(null);
-  const [orderSerial, setOrderSerial] = useState(null);
-  const [showQr, setShowQr] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [fedapayReady, setFedapayReady] = useState(false);
-  const [payableAmount, setPayableAmount] = useState(0);
-  const paymentRef = useRef(null);
-  const foodSubtotal = useMemo(() => items.reduce((sum, item) => sum + numericPrice(item.price) * Math.max(1, Number(item.quantity) || 1), 0), [items]);
-  const deliveryFee = delivery === "pickup" ? 0 : Number(quote?.deliveryFee || 0);
-
-  useEffect(() => {
-    try { const saved = JSON.parse(localStorage.getItem("miamgo-cart") || "null"); if (Array.isArray(saved) && saved.length) setItems(saved.map(normalizeCartItem)); } catch {}
-    return onAuthStateChanged(auth, async (session) => { setUser(session); if (session) { ensureCustomerProfile(session).catch(() => {}); const cart = await getCart(session.uid).catch(() => ({ items: [] })); if (cart.restaurantId) setRestaurantId(cart.restaurantId); if (cart.items?.length) setItems(cart.items.map(normalizeCartItem)); } });
-  }, []);
-
-  useEffect(() => {
-    if (!orderId) return undefined;
-    let stop;
-    import("firebase/firestore").then(({ doc, getFirestore, onSnapshot }) => { stop = onSnapshot(doc(getFirestore(), "orders", orderId), (snapshot) => { const data = snapshot.data(); if (data?.paymentStatus === "paid") { setPaymentLoading(false); setStatus(`Commande confirmée ! Numéro ${data.serialNumber || orderSerial || orderId}.`); setShowQr(true); } if (data?.paymentStatus === "payment_failed") { setPaymentLoading(false); setStatus("Le paiement a été refusé. Vous pouvez réessayer."); } }); });
-    return () => stop?.();
-  }, [orderId, orderSerial]);
-
-  useEffect(() => {
-    async function confirmFromWidget(event) {
-      if (!orderId || !user) return;
-      const transaction = event.detail?.transaction || event.detail;
-      const transactionIdFromWidget = transaction?.id || transaction?.transaction?.id || transactionId;
-      const widgetStatus = transaction?.status || transaction?.transaction?.status || event.detail?.status || "";
-      if (!transactionIdFromWidget) return;
-      const token = await user.getIdToken();
-      for (let attempt = 0; attempt < 6; attempt += 1) {
-        const response = await fetch("/api/fedapay/confirm-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId, transactionId: transactionIdFromWidget, widgetStatus }) });
-        const result = await response.json().catch(() => ({}));
-        if (response.ok && result.confirmed) { setPaymentLoading(false); setStatus(`Commande confirmée ! Numéro ${orderSerial || orderId}.`); setShowQr(true); return; }
-        if (attempt < 5) await new Promise((resolve) => window.setTimeout(resolve, 2000));
-      }
-      setPaymentLoading(false); setStatus("Paiement reçu. La confirmation FedaPay prend encore quelques instants.");
-    }
-    window.addEventListener("miamgo-fedapay-complete", confirmFromWidget);
-    return () => window.removeEventListener("miamgo-fedapay-complete", confirmFromWidget);
-  }, [orderId, orderSerial, transactionId, user]);
-
-  async function locate() {
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const nextCoordinates = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-      setCoordinates(nextCoordinates);
-      try { const response = await fetch("/api/delivery/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId: "chez-aicha", ...nextCoordinates }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); setQuote(data); setStatus(""); } catch (error) { setStatus(error.message); } finally { setLocating(false); }
-    }, () => { setStatus("La géolocalisation est obligatoire pour calculer la livraison."); setLocating(false); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-  }
-
-  async function pay() {
-    if (!user) { setStatus("Connectez-vous pour passer commande."); return; }
-    if (delivery === "delivery" && (!coordinates || !quote)) { setStatus("Indiquez votre position pour calculer la livraison."); return; }
-    setPaymentLoading(true); setStatus("");
-    try {
-      const created = await createOrder(user.uid, { restaurantId, items, deliveryMode: delivery === "pickup" ? "pickup" : "delivery", deliveryFee, courierShare: delivery === "delivery" ? Math.floor(deliveryFee * 0.8) : 0, deliveryCoordinates: coordinates, foodSubtotal });
-      setOrderId(created.id); setOrderSerial(created.serialNumber);
-      const token = await user.getIdToken();
-      const response = await fetch("/api/fedapay/create-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId: created.id }) });
-      const payload = await response.json(); if (!response.ok) throw new Error(payload.error || "Création de la transaction impossible.");
-      setTransactionId(String(extractFedaPayTransactionId(payload)));
-      setPayableAmount(Number(payload.breakdown?.total || foodSubtotal + deliveryFee));
-      setTimeout(() => paymentRef.current?.open().catch((error) => { setPaymentLoading(false); setStatus(error.message); }), 50);
-    } catch (error) { setPaymentLoading(false); setStatus(error.message || "Impossible de lancer le paiement."); }
-  }
-
-  return <><Script src="https://cdn.fedapay.com/checkout.js?v=1.1.7" strategy="afterInteractive" onLoad={() => setFedapayReady(true)} /><PlatformShell><main className="content-wrap checkout-page"><Link className="back-link" href="/panier"><ChevronLeft size={17}/>Retour au panier</Link><p className="eyebrow">FINALISER LA COMMANDE</p><h1>Votre commande</h1><section className="checkout-form"><div className="checkout-mode"><button className={delivery === "delivery" ? "selected" : ""} onClick={() => setDelivery("delivery")}><Truck size={18}/>Livraison</button><button className={delivery === "pickup" ? "selected" : ""} onClick={() => setDelivery("pickup")}><ShoppingBag size={18}/>Retrait sur place</button></div>{delivery === "delivery" && <div className="location-box"><MapPin size={18}/><div><strong>Votre adresse de livraison</strong><p>{quote ? `${quote.distanceKm} km · ${quote.deliveryFee.toLocaleString("fr-FR")} FCFA` : "Calculez les frais selon votre position."}</p></div><button onClick={locate} disabled={locating}><LocateFixed size={15}/>{locating ? "Localisation..." : "Utiliser ma position"}</button></div>}<div className="checkout-items">{items.map((item) => <div key={item.id}><span>{item.quantity} × {item.name}</span><strong>{(item.price * item.quantity).toLocaleString("fr-FR")} FCFA</strong></div>)}</div><div className="checkout-total"><span>Sous-total restaurant</span><strong>{foodSubtotal.toLocaleString("fr-FR")} FCFA</strong></div><div className="checkout-total"><span>Livraison</span><strong>{deliveryFee.toLocaleString("fr-FR")} FCFA</strong></div><p className="checkout-fee-note"><Check size={15}/>Les frais de service Miamgo sont offerts sur vos 5 premières commandes. Ils seront calculés au paiement à partir de la 6e.</p><button className="checkout-pay" onClick={pay} disabled={paymentLoading || !fedapayReady}>{paymentLoading ? "Préparation du paiement..." : "Payer avec FedaPay"}</button>{status && <p className="settings-notice">{status}</p>}</section>{showQr && orderId && <section className="order-qr"><h2>Présentez ce QR au restaurant</h2><MiamgoQr value={orderId}/></section>}<FedaPayCheckout ref={paymentRef} transactionId={transactionId} amount={foodSubtotal + deliveryFee} description={`Commande Miamgo ${orderSerial || ""}`} customer={user} ready={fedapayReady} onComplete={({ transaction }) => { if (transaction?.status === "approved") setStatus("Paiement reçu, confirmation en cours."); }} onError={setStatus}/></main></PlatformShell></>;
+  const router = useRouter(); const [delivery, setDelivery] = useState("delivery"); const [items, setItems] = useState([]); const [restaurantId, setRestaurantId] = useState("chez-aicha"); const [user, setUser] = useState(null); const [status, setStatus] = useState(""); const [coordinates, setCoordinates] = useState(null); const [quote, setQuote] = useState(null); const [locating, setLocating] = useState(false); const [transactionId, setTransactionId] = useState(null); const [orderId, setOrderId] = useState(null); const [orderSerial, setOrderSerial] = useState(null); const [showConfirmation, setShowConfirmation] = useState(false); const [paymentLoading, setPaymentLoading] = useState(false); const [fedapayReady, setFedapayReady] = useState(false); const paymentRef = useRef(null);
+  const foodSubtotal = useMemo(() => items.reduce((sum, item) => sum + numericPrice(item.price) * Math.max(1, Number(item.quantity) || 1), 0), [items]); const deliveryFee = delivery === "pickup" ? 0 : Number(quote?.deliveryFee || 0);
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("miamgo-cart") || "null"); if (Array.isArray(saved)) setItems(saved.map(normalizeCartItem)); } catch {} return onAuthStateChanged(auth, async (session) => { setUser(session); if (!session) return; ensureCustomerProfile(session).catch(() => {}); const cart = await getCart(session.uid).catch(() => ({ items: [] })); if (cart.restaurantId) setRestaurantId(cart.restaurantId); if (cart.items?.length) setItems(cart.items.map(normalizeCartItem)); }); }, []);
+  useEffect(() => { if (!orderId) return undefined; let stop; import("firebase/firestore").then(({ doc, getFirestore, onSnapshot }) => { stop = onSnapshot(doc(getFirestore(), "orders", orderId), (snapshot) => { const data = snapshot.data(); if (data?.paymentStatus === "paid") { setPaymentLoading(false); setOrderSerial(data.serialNumber || orderSerial || orderId); setShowConfirmation(true); } if (data?.paymentStatus === "payment_failed") { setPaymentLoading(false); setStatus("Le paiement a été refusé. Vous pouvez réessayer."); } }); }); return () => stop?.(); }, [orderId, orderSerial]);
+  useEffect(() => { async function confirmFromWidget(event) { if (!orderId || !user) return; const transaction = event.detail?.transaction || event.detail; const currentTransactionId = transaction?.id || transaction?.transaction?.id || transactionId; const widgetStatus = transaction?.status || transaction?.transaction?.status || event.detail?.status || ""; if (!currentTransactionId) return; const token = await user.getIdToken(); for (let attempt = 0; attempt < 6; attempt += 1) { const response = await fetch("/api/fedapay/confirm-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId, transactionId: currentTransactionId, widgetStatus }) }); const result = await response.json().catch(() => ({})); if (response.ok && result.confirmed) { setPaymentLoading(false); setShowConfirmation(true); return; } if (attempt < 5) await new Promise((resolve) => window.setTimeout(resolve, 2000)); } setPaymentLoading(false); setStatus("Paiement reçu. La confirmation FedaPay prend encore quelques instants."); } window.addEventListener("miamgo-fedapay-complete", confirmFromWidget); return () => window.removeEventListener("miamgo-fedapay-complete", confirmFromWidget); }, [orderId, transactionId, user]);
+  function locate() { setLocating(true); navigator.geolocation.getCurrentPosition(async (position) => { const next = { latitude: position.coords.latitude, longitude: position.coords.longitude }; setCoordinates(next); try { const response = await fetch("/api/delivery/quote", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId, ...next }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); setQuote(data); } catch (error) { setStatus(error.message); } finally { setLocating(false); } }, () => { setStatus("La géolocalisation est obligatoire pour calculer la livraison."); setLocating(false); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }); }
+  async function pay() { if (!user) { setStatus("Connectez-vous pour passer commande."); return; } if (delivery === "delivery" && (!coordinates || !quote)) { setStatus("Indiquez votre position pour calculer la livraison."); return; } setPaymentLoading(true); setStatus(""); try { const created = await createOrder(user.uid, { restaurantId, items, deliveryMode: delivery === "pickup" ? "pickup" : "delivery", deliveryFee, courierShare: delivery === "delivery" ? Math.floor(deliveryFee * .8) : 0, deliveryCoordinates: coordinates, foodSubtotal }); setOrderId(created.id); setOrderSerial(created.serialNumber); const token = await user.getIdToken(); const response = await fetch("/api/fedapay/create-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId: created.id }) }); const payload = await response.json(); if (!response.ok) throw new Error(payload.error); setTransactionId(String(extractFedaPayTransactionId(payload))); setTimeout(() => paymentRef.current?.open().catch((error) => { setPaymentLoading(false); setStatus(error.message); }), 50); } catch (error) { setPaymentLoading(false); setStatus(error.message || "Impossible de lancer le paiement."); } }
+  return <><Script src="https://cdn.fedapay.com/checkout.js?v=1.1.7" strategy="afterInteractive" onLoad={() => setFedapayReady(true)} /><PlatformShell><main className="content-wrap checkout-page"><Link className="back-link" href="/panier"><ChevronLeft size={17}/>Retour au panier</Link><p className="eyebrow">FINALISER LA COMMANDE</p><h1>Votre commande</h1><section className="checkout-form"><div className="checkout-mode"><button type="button" className={delivery === "delivery" ? "selected" : ""} onClick={() => setDelivery("delivery")}><Truck size={18}/>Livraison</button><button type="button" className={delivery === "pickup" ? "selected" : ""} onClick={() => setDelivery("pickup")}><ShoppingBag size={18}/>Retrait sur place</button></div>{delivery === "delivery" && <div className="location-box"><MapPin size={18}/><div><strong>Votre adresse de livraison</strong><p>{quote ? `${quote.distanceKm} km · ${quote.deliveryFee.toLocaleString("fr-FR")} FCFA` : "Calculez les frais selon votre position."}</p></div><button type="button" onClick={locate} disabled={locating}><LocateFixed size={15}/>{locating ? "Localisation..." : "Utiliser ma position"}</button></div>}<div className="checkout-items">{items.map((item) => <div key={item.id}><span>{item.quantity} × {item.name}</span><strong>{(numericPrice(item.price) * item.quantity).toLocaleString("fr-FR")} FCFA</strong></div>)}</div><div className="checkout-total"><span>Sous-total restaurant</span><strong>{foodSubtotal.toLocaleString("fr-FR")} FCFA</strong></div><div className="checkout-total"><span>Livraison</span><strong>{deliveryFee.toLocaleString("fr-FR")} FCFA</strong></div><p className="checkout-fee-note"><Check size={15}/>Les frais de service Miamgo sont offerts sur vos 5 premières commandes.</p><button type="button" className="checkout-pay" onClick={pay} disabled={paymentLoading || !fedapayReady}>{paymentLoading ? "Préparation du paiement..." : "Payer avec FedaPay"}</button>{status && <p className="settings-notice">{status}</p>}</section><FedaPayCheckout ref={paymentRef} transactionId={transactionId} amount={foodSubtotal + deliveryFee} description={`Commande Miamgo ${orderSerial || ""}`} customer={user} ready={fedapayReady} onError={setStatus}/></main></PlatformShell>{showConfirmation && <div className="payment-success-backdrop"><section className="payment-success-modal" role="dialog" aria-modal="true"><button type="button" className="payment-success-close" onClick={() => setShowConfirmation(false)} aria-label="Fermer"><X size={18}/></button><div className="payment-success-icon"><Check size={25}/></div><p className="eyebrow">PAIEMENT CONFIRMÉ</p><h2>Merci pour votre commande !</h2><p>Votre commande <strong>{orderSerial || orderId}</strong> a bien été reçue par le restaurant.</p><Link className="payment-follow-button" href={`/commandes?order=${orderId}`} onClick={() => setShowConfirmation(false)}>Suivre ma commande</Link></section></div>}</>;
 }

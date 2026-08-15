@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { Check, ClipboardList, Clock3, MapPin, Truck, X } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import PlatformShell from "../../components/PlatformShell";
-import DeliveryTrackingMap from "../../components/DeliveryTrackingMap";
 import { auth } from "../../lib/firebase";
-import { getActiveCustomerDelivery } from "../../lib/firestore";
+import { getCustomerOrders } from "../../lib/firestore";
+import MiamgoQr from "../../components/MiamgoQr";
 
-export default function OrdersPage() {
-  const [order, setOrder] = useState(null);
-  useEffect(() => onAuthStateChanged(auth, async (user) => { if (user) setOrder(await getActiveCustomerDelivery(user.uid).catch(() => null)); }), []);
-  return <PlatformShell active="Commandes"><main className="content-wrap orders-page"><p className="eyebrow">VOS REPAS</p><h1>Mes commandes</h1>{order ? <><section className="active-order-card"><strong>{order.serialNumber || "Commande en cours"}</strong><span>{order.restaurantName || order.restaurantId || "Restaurant"} · Livraison en cours</span></section><DeliveryTrackingMap orderId={order.id} driverId={order.assignedDriverId} title="Votre livreur en route"/></> : <section className="empty-state"><ClipboardList size={34}/><h2>Aucune commande en cours</h2><p>Vos commandes avec livraison apparaîtront ici pendant le trajet.</p><Link href="/explorer">Explorer les restaurants</Link></section>}</main></PlatformShell>;
+const labels = { pending: "Paiement en attente", paid: "Commande reçue", preparing: "En préparation", ready: "Commande prête", driver_requested: "Recherche d’un livreur", assigned: "Livraison prête", out_for_delivery: "En livraison", completed: "Livrée" };
+
+export default function CustomerOrders() {
+  const [orders, setOrders] = useState([]); const [loading, setLoading] = useState(true); const [qrOrder, setQrOrder] = useState(null);
+  useEffect(() => { let timer; const stop = onAuthStateChanged(auth, async (user) => { if (user) { const refresh = async () => setOrders(await getCustomerOrders(user.uid).catch(() => [])); await refresh(); timer = window.setInterval(refresh, 5000); } setLoading(false); }); return () => { stop(); window.clearInterval(timer); }; }, []);
+  return <PlatformShell active="Commandes"><main className="content-wrap orders-page"><p className="eyebrow">VOS REPAS</p><h1>Mes commandes</h1>{loading ? <p>Chargement de vos commandes...</p> : orders.length ? <section className="customer-order-list">{orders.map((order) => <article className={`customer-order-card ${order.status === "completed" ? "is-completed" : ""}`} key={order.id}><header><div><strong>{order.serialNumber || order.id}</strong><small>{order.deliveryMode === "pickup" ? "Retrait au restaurant" : "Livraison à domicile"}</small></div><span className="customer-order-status"><span/>{labels[order.status] || order.status || "En attente"}</span></header><div className="customer-order-items">{(order.items || []).map((item, index) => <span key={`${item.id}-${index}`}>{item.quantity || 1} × {item.name || item.dish}</span>)}</div>{order.status === "out_for_delivery" && <div className="customer-order-tracking"><Truck size={17}/>Votre livreur est en route</div>}{order.status === "ready" && order.deliveryMode === "pickup" && <div className="customer-order-ready"><MapPin size={16}/>Votre commande est prête au restaurant</div>}{order.status === "assigned" && <div className="customer-order-ready"><Truck size={16}/>Un livreur a accepté votre commande</div>}{order.status === "completed" && <div className="customer-order-done"><Check size={16}/>Commande validée avec succès</div>}{order.paymentStatus === "paid" && !order.validationStatus && <button type="button" className="customer-order-qr-button" onClick={() => setQrOrder(order)}>Mon QR</button>}{order.validationStatus === "validated" && <span className="customer-order-qr-disabled">QR déjà utilisé</span>}</article>)}</section> : <section className="empty-state"><ClipboardList size={34}/><h2>Aucune commande</h2><p>Vos commandes apparaîtront ici après paiement.</p><Link href="/explorer">Explorer les restaurants</Link></section>}</main>{qrOrder && <div className="payment-success-backdrop"><section className="order-qr-modal" role="dialog" aria-modal="true"><button type="button" className="payment-success-close" onClick={() => setQrOrder(null)} aria-label="Fermer"><X size={18}/></button><p className="eyebrow">PRÉSENTER AU RESTAURANT</p><h2>{qrOrder.serialNumber || qrOrder.id}</h2><p>Présentez ce QR code au restaurant ou au livreur.</p><MiamgoQr value={`miamgo:${qrOrder.deliveryMode === "pickup" ? "pickup" : "delivery"}:${qrOrder.id}`} size={230}/></section></div>}</PlatformShell>;
 }

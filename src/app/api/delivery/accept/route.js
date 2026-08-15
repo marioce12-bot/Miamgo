@@ -13,7 +13,8 @@ export async function POST(request) {
     const orderSnapshot = await orderRef.get();
     if (!orderSnapshot.exists) return NextResponse.json({ error: "Course introuvable." }, { status: 404 });
     const order = orderSnapshot.data();
-    if (order.deliveryMode !== "delivery" || order.deliveryStatus !== "en_attente_livraison" || order.assignedDriverId) return NextResponse.json({ error: "Cette course n’est plus disponible." }, { status: 409 });
+    if (order.deliveryMode !== "delivery" || !["en_attente_livraison", "proposee"].includes(order.deliveryStatus) || (order.deliveryStatus === "proposee" && order.assignedDriverId !== actor.uid)) return NextResponse.json({ error: "Cette course n’est plus disponible." }, { status: 409 });
+    if (order.driverOfferExpiresAt?.toDate?.() && order.driverOfferExpiresAt.toDate() < new Date()) { await orderRef.update({ assignedDriverId: null, deliveryStatus: "en_attente_livraison", status: "ready", driverOfferExpiresAt: null, updatedAt: new Date() }); return NextResponse.json({ error: "Le délai de confirmation est expiré. Choisissez une autre course." }, { status: 409 }); }
     const driver = await db.collection("users").doc(actor.uid).get();
     if (!driver.exists || driver.data().role !== "driver") return NextResponse.json({ error: "Seul un livreur peut accepter cette course." }, { status: 403 });
     const restaurant = await db.collection("restaurants").doc(String(order.restaurantId)).get();
