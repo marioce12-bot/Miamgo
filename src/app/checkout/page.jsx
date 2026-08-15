@@ -10,10 +10,12 @@ import PlatformShell from "../../components/PlatformShell";
 import FedaPayCheckout from "../../components/FedaPayCheckout";
 import MiamgoQr from "../../components/MiamgoQr";
 import { auth } from "../../lib/firebase";
-import { createOrder, ensureCustomerProfile } from "../../lib/firestore";
+import { createOrder, ensureCustomerProfile, getCart } from "../../lib/firestore";
 import { extractFedaPayTransactionId } from "../../lib/fedapay";
 
 const fallbackItems = [];
+const numericPrice = (value) => { if (typeof value === "number") return Number.isFinite(value) ? value : 0; const digits = String(value || "").replace(/[^0-9-]/g, ""); return Number(digits) || 0; };
+const normalizeCartItem = (item) => ({ ...item, name: item.name || item.dish || "Article", price: numericPrice(item.price), quantity: Math.max(1, Number(item.quantity) || 1) });
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -32,12 +34,12 @@ export default function CheckoutPage() {
   const [fedapayReady, setFedapayReady] = useState(false);
   const [payableAmount, setPayableAmount] = useState(0);
   const paymentRef = useRef(null);
-  const foodSubtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0), [items]);
+  const foodSubtotal = useMemo(() => items.reduce((sum, item) => sum + numericPrice(item.price) * Math.max(1, Number(item.quantity) || 1), 0), [items]);
   const deliveryFee = delivery === "pickup" ? 0 : Number(quote?.deliveryFee || 0);
 
   useEffect(() => {
-    try { const saved = JSON.parse(localStorage.getItem("miamgo-cart") || "null"); if (Array.isArray(saved) && saved.length) setItems(saved); } catch {}
-    return onAuthStateChanged(auth, (session) => { setUser(session); if (session) ensureCustomerProfile(session).catch(() => {}); });
+    try { const saved = JSON.parse(localStorage.getItem("miamgo-cart") || "null"); if (Array.isArray(saved) && saved.length) setItems(saved.map(normalizeCartItem)); } catch {}
+    return onAuthStateChanged(auth, async (session) => { setUser(session); if (session) { ensureCustomerProfile(session).catch(() => {}); const cart = await getCart(session.uid).catch(() => ({ items: [] })); if (cart.items?.length) setItems(cart.items.map(normalizeCartItem)); } });
   }, []);
 
   useEffect(() => {
