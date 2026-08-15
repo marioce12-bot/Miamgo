@@ -21,6 +21,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [delivery, setDelivery] = useState("delivery");
   const [items, setItems] = useState(fallbackItems);
+  const [restaurantId, setRestaurantId] = useState("chez-aicha");
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState("");
   const [coordinates, setCoordinates] = useState(null);
@@ -39,7 +40,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     try { const saved = JSON.parse(localStorage.getItem("miamgo-cart") || "null"); if (Array.isArray(saved) && saved.length) setItems(saved.map(normalizeCartItem)); } catch {}
-    return onAuthStateChanged(auth, async (session) => { setUser(session); if (session) { ensureCustomerProfile(session).catch(() => {}); const cart = await getCart(session.uid).catch(() => ({ items: [] })); if (cart.items?.length) setItems(cart.items.map(normalizeCartItem)); } });
+    return onAuthStateChanged(auth, async (session) => { setUser(session); if (session) { ensureCustomerProfile(session).catch(() => {}); const cart = await getCart(session.uid).catch(() => ({ items: [] })); if (cart.restaurantId) setRestaurantId(cart.restaurantId); if (cart.items?.length) setItems(cart.items.map(normalizeCartItem)); } });
   }, []);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function CheckoutPage() {
     if (delivery === "delivery" && (!coordinates || !quote)) { setStatus("Indiquez votre position pour calculer la livraison."); return; }
     setPaymentLoading(true); setStatus("");
     try {
-      const created = await createOrder(user.uid, { restaurantId: "chez-aicha", items, deliveryMode: delivery === "pickup" ? "pickup" : "delivery", deliveryFee, courierShare: delivery === "delivery" ? Math.floor(deliveryFee * 0.8) : 0, deliveryCoordinates: coordinates, foodSubtotal });
+      const created = await createOrder(user.uid, { restaurantId, items, deliveryMode: delivery === "pickup" ? "pickup" : "delivery", deliveryFee, courierShare: delivery === "delivery" ? Math.floor(deliveryFee * 0.8) : 0, deliveryCoordinates: coordinates, foodSubtotal });
       setOrderId(created.id); setOrderSerial(created.serialNumber);
       const token = await user.getIdToken();
       const response = await fetch("/api/fedapay/create-transaction", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ orderId: created.id }) });
