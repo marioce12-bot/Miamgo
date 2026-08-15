@@ -235,7 +235,7 @@ function StoryViewer({ stories, index, user, onClose }) {
               <div className="order-row"><div><span>Publication restaurant</span><strong>{post.price}</strong></div><button className="order-now" onClick={() => router.push(`/restaurant/${post.restaurantId || ""}`)}>Visiter le restaurant</button></div>
             </article>;
           })}
-          {visiblePosts.length === 0 && <div className="empty-state"><UtensilsCrossed size={34} /><h2>Aucun plat trouvé</h2><p>Essayez un autre mot-clé.</p></div>}{hasMorePosts && <div ref={loadMoreRef} className="feed-load-sentinel">{loadingMorePosts ? "Chargement..." : ""}</div>}
+          {visiblePosts.length === 0 && <div className="empty-state"><UtensilsCrossed size={34} /><h2>Aucune publication pour le moment</h2></div>}{hasMorePosts && <div ref={loadMoreRef} className="feed-load-sentinel">{loadingMorePosts ? "Chargement..." : ""}</div>}
         </section>
 
         {role !== "restaurant_owner" && <aside className="right-sidebar" id="restaurants">
