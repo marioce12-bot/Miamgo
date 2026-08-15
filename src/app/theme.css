@@ -282,6 +282,8 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
 .feed-intro h1 { margin-top:0; }
 .restaurant-story { width:134px!important; height:172px!important; flex-basis:134px!important; border-radius:14px; }
 .restaurant-stories { gap:11px; }
+.feed { padding-top:12px; }
+.restaurant-stories { margin-top:4px!important; }
 .restaurant-customer-order-list { display:grid; gap:12px; }
 .restaurant-order-list,.customer-order-list { display:grid; gap:13px; }
 .restaurant-order-tabs,.customer-order-tabs { display:flex; gap:8px; overflow:auto; padding:2px 0 18px; scrollbar-width:none; }
@@ -433,6 +435,8 @@ body { background:radial-gradient(circle at 12% 7%,#f9e1bb 0,transparent 22%),ra
   .restaurant-menu-page-heading h1,.restaurant-orders-heading h1 { font-size:30px; }
   .restaurant-story { width:134px!important; height:172px!important; flex-basis:134px!important; }
   .restaurant-stories { gap:10px; padding-bottom:12px; }
+  .feed { padding-top:12px; }
+  .restaurant-stories { margin-top:4px!important; }
   .restaurant-menu-page-heading { display:block; margin-bottom:18px; }
   .restaurant-menu-page-heading h1 { font-size:34px; }
   .restaurant-menu-page-heading .dashboard-primary-action { margin-top:22px; }
