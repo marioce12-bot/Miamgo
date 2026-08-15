@@ -4,6 +4,7 @@ import { getAdminAuth, getAdminDb, getAdminRealtimeDb } from "../../../../../lib
 export const runtime = "nodejs";
 
 export async function POST(request, { params }) {
+  const { orderId } = await params;
   const authorization = request.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return NextResponse.json({ error: "Authentification requise." }, { status: 401 });
   let actor;
@@ -12,13 +13,13 @@ export async function POST(request, { params }) {
   const rawQr = String(body.qr || "");
   const qr = rawQr.trim();
   const match = qr.match(/^miamgo\s*:\s*(pickup|delivery)\s*:\s*([^:\s]+)\s*$/i);
-  console.info("[QR_VALIDATE] received", { rawQr, normalizedQr: qr, routeOrderId: params.orderId, parsedMode: match?.[1] || null, parsedReference: match?.[2] || null, actorId: actor.uid });
+  console.info("[QR_VALIDATE] received", { rawQr, normalizedQr: qr, routeOrderId: orderId, parsedMode: match?.[1] || null, parsedReference: match?.[2] || null, actorId: actor.uid });
   if (!match) { console.warn("[QR_VALIDATE] rejected: invalid format", { rawQr, expected: "miamgo:{pickup|delivery}:{orderId}" }); return NextResponse.json({ error: "QR invalide. Format attendu : miamgo:pickup:ID ou miamgo:delivery:ID." }, { status: 400 }); }
   const qrReference = match[2];
-  if (qrReference !== params.orderId) { console.warn("[QR_VALIDATE] rejected: route/reference mismatch", { routeOrderId: params.orderId, qrReference }); return NextResponse.json({ error: "QR invalide ou non associé à cette commande." }, { status: 400 }); }
+  if (qrReference !== orderId) { console.warn("[QR_VALIDATE] rejected: route/reference mismatch", { routeOrderId: orderId, qrReference }); return NextResponse.json({ error: "QR invalide ou non associé à cette commande." }, { status: 400 }); }
   const db = getAdminDb();
-  let orderRef = db.collection("orders").doc(params.orderId);
-  if (!(await orderRef.get()).exists) { const bySerial = await db.collection("orders").where("serialNumber", "==", params.orderId).limit(1).get(); if (bySerial.empty) { console.warn("[QR_VALIDATE] rejected: order not found", { orderId: params.orderId, qrReference }); return NextResponse.json({ error: "Commande introuvable." }, { status: 404 }); } orderRef = bySerial.docs[0].ref; }
+  let orderRef = db.collection("orders").doc(orderId);
+  if (!(await orderRef.get()).exists) { const bySerial = await db.collection("orders").where("serialNumber", "==", orderId).limit(1).get(); if (bySerial.empty) { console.warn("[QR_VALIDATE] rejected: order not found", { orderId, qrReference }); return NextResponse.json({ error: "Commande introuvable." }, { status: 404 }); } orderRef = bySerial.docs[0].ref; }
   let assignedDriverId = null;
   let validatedOrder = null;
   const result = await db.runTransaction(async (transaction) => {
