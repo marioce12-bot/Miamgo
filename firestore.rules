@@ -103,7 +103,8 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow create: if signedIn() && request.resource.data.customerId == request.auth.uid
-        && get(/databases/$(database)/documents/restaurants/$(request.resource.data.restaurantId)).data.status == 'active';
+        && (get(/databases/$(database)/documents/restaurants/$(request.resource.data.restaurantId)).data.status == 'active'
+          || get(/databases/$(database)/documents/restaurants/$(request.resource.data.restaurantId)).data.subscriptionStatus == 'active');
       allow read: if signedIn()
         && (resource.data.customerId == request.auth.uid
           || isRestaurantOwner(resource.data.restaurantId)
